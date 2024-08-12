@@ -1,6 +1,7 @@
 import torch
 
 from transformers import (BertModel, RobertaModel)
+from transformers.models.mpnet.modeling_mpnet import MPNetModel
 from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           GPTJForCausalLM, GPTNeoXForCausalLM,
                           LlamaForCausalLM, MptForCausalLM, Qwen2ForCausalLM, 
@@ -56,7 +57,7 @@ def get_embedding_weight(model):
     if isinstance(model, SentenceEmbeddingModel):
         model = model.model
     # encode items and get the max length
-    if isinstance(model, BertModel) or isinstance(model, RobertaModel):
+    if isinstance(model, MPNetModel) or isinstance(model, RobertaModel):
         return model.get_input_embeddings().weight
     else:
         raise ValueError(f"Unknown model type: {type(model)}")
@@ -66,7 +67,7 @@ def get_embeddings(model, input_ids):
         model = model.model
 
     # encode items and get the max length
-    if isinstance(model, BertModel) or isinstance(model, RobertaModel):
+    if isinstance(model, MPNetModel) or isinstance(model, RobertaModel):
         return model.embeddings.word_embeddings(input_ids).half()
     else:
         raise ValueError(f"Unknown model type: {type(model)}")

@@ -2,7 +2,7 @@ import sys
 import os
 import pdb
 
-sys.path.append(os.path.abspath('../GCG/'))
+sys.path.append(os.path.abspath('../RAGInjection/'))
 
 from GCG.run_gcg import gcg_attack
 
@@ -25,5 +25,5 @@ if __name__ == "__main__":
     parser.add_argument("--run_index", type=int, default=1)
 
     args = parser.parse_args()
-    pdb.set_trace()
+    
     gcg_attack(args)

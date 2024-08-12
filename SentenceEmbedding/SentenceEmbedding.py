@@ -12,27 +12,29 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 # Custom similarity model
-class SentenceSimilarityModel(nn.Module):
+class SentenceEmbeddingModel(nn.Module):
     def __init__(self, model_path):
         # model_path = "MPNetModel"
-        super(SentenceSimilarityModel, self).__init__()
+        super(SentenceEmbeddingModel, self).__init__()
         self.model = AutoModel.from_pretrained(model_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    def forward(self, sentences=None, input_embeds=None):
-        if input_embeds is not None:
+    def forward(self, sentences=None, input_ids=None, inputs_embeds=None):
+        if inputs_embeds is not None:  # Calculate embeddings from sentences directly
             # Tokenize sentences if input embeddings are not provided
-            encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')
-            input_embeds = self.model.embeddings(input_ids=encoded_input['input_ids'])
-            attention_mask = encoded_input['attention_mask']
+            pdb.set_trace()
+            model_output = self.model(inputs_embeds=inputs_embeds).last_hidden_state
+            encoded_input = {'attention_mask': inputs_embeds != 0}
+        elif input_ids is not None:  # Calculate embeddings from input ids
+            model_output = self.model(input_ids=input_ids).last_hidden_state
+            encoded_input = {'attention_mask': input_ids != 0}
         else:
-            # Assume attention_mask is provided when using input_embeds
-            attention_mask = (input_embeds.sum(dim=-1) != 0).long()
-        
-        # Compute token embeddings
-        model_output = self.model(inputs_embeds=input_embeds, attention_mask=attention_mask)
-        
+            encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
+            model_output = self.model(**encoded_input)
+
         # Perform pooling
+        pdb.set_trace()
         sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
         
         # Normalize embeddings
@@ -54,20 +56,22 @@ class SimilarityLoss(nn.Module):
         # Average the loss over the batch
         return loss.mean()
 
-# Example sentences A and B
-sentence_A = "I’m a student.!!!!!!!!!!!!"
-sentence_B = "Man? What can I say."
 
-# Instantiate model and loss function
-model_path = "./saved_model"
-similarity_model = SentenceSimilarityModel(model_path)
-loss_function = SimilarityLoss()
+if __name__ == "__main__":
+    # Example sentences A and B
+    sentence_A = "I’m a student.!!!!!!!!!!!!"
+    sentence_B = "Man? What can I say."
 
-# Compute embeddings
-embeddings_A = similarity_model([sentence_A])
-embeddings_B = similarity_model([sentence_B])
+    # Instantiate model and loss function
+    model_path = "./saved_model"
+    similarity_model = SentenceEmbeddingModel(model_path)
+    loss_function = SimilarityLoss()
 
-# Calculate loss
-loss = loss_function(embeddings_A, embeddings_B)
+    # Compute embeddings
+    embeddings_A = similarity_model([sentence_A])
+    embeddings_B = similarity_model([sentence_B])
 
-print(f"Loss (1 - Cosine Similarity): {loss.item()}")
+    # Calculate loss
+    loss = loss_function(embeddings_A, embeddings_B)
+
+    print(f"Loss (1 - Cosine Similarity): {loss.item()}")
