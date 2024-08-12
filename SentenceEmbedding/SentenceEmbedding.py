@@ -1,4 +1,6 @@
 from transformers import AutoModel, AutoTokenizer
+
+from sentence_transformers.models import Pooling
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,6 +13,14 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
+def get_pooling_results(model_output, attention_mask, pooling_mode='mean'):
+    pooling = Pooling(word_embedding_dimension=768 ,pooling_mode=pooling_mode)
+    standard_out = {}
+    standard_out['token_embeddings'] = model_output.last_hidden_state
+    standard_out['attention_mask'] = attention_mask
+    pooling_out = pooling(standard_out)
+    return pooling_out['sentence_embedding']
+
 # Custom similarity model
 class SentenceEmbeddingModel(nn.Module):
     def __init__(self, model_path):
@@ -21,22 +31,20 @@ class SentenceEmbeddingModel(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     def forward(self, sentences=None, input_ids=None, inputs_embeds=None):
+        
         if inputs_embeds is not None:  # Calculate embeddings from sentences directly
             # Tokenize sentences if input embeddings are not provided
             pdb.set_trace()
-            model_output = self.model(inputs_embeds=inputs_embeds).last_hidden_state
-            encoded_input = {'attention_mask': inputs_embeds != 0}
+            model_output = self.model(inputs_embeds=inputs_embeds)
+            encoded_input = {'attention_mask': (inputs_embeds != 0).any(dim=-1).long()}
         elif input_ids is not None:  # Calculate embeddings from input ids
-            model_output = self.model(input_ids=input_ids).last_hidden_state
+            model_output = self.model(input_ids=input_ids)
             encoded_input = {'attention_mask': input_ids != 0}
         else:
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
 
-        # Perform pooling
-        pdb.set_trace()
-        sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
-        
+        sentence_embeddings = get_pooling_results(model_output, encoded_input['attention_mask'])
         # Normalize embeddings
         sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
         
