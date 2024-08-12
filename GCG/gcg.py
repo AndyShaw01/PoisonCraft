@@ -11,8 +11,8 @@ import pdb
 from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           GPTJForCausalLM, GPTNeoXForCausalLM,
                           LlamaForCausalLM)
-from GCG.gcg_utils import get_nonascii_toks, verify_input, get_embedding_weight, get_embeddings, get_fixed_list, chatgpt_evaluate, get_SentenceBERT_embedding_weights, get_SentenceBERT_embedding
-from SentenceEmbedding import SentenceSimilarityModel, SimilarityLoss
+from GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
+from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, SimilarityLoss
 def token_gradients(model, input_ids, target_embedding, input_slice):
     """
     Computes gradients of the loss with respect to the coordinates.
@@ -40,7 +40,7 @@ def token_gradients(model, input_ids, target_embedding, input_slice):
     input_embeds = (one_hot @ embed_weights).unsqueeze(0)
 
     # now sitich it togethor with the rest of the embeddings
-    embeds = get_SentenceBERT_embedding(model, input_ids.unsqueeze(0)).detach()
+    embeds = get_embeddings(model, input_ids.unsqueeze(0)).detach()
     full_embeds = torch.cat(
         [
             embeds[:, :input_slice.start, :],
@@ -49,7 +49,7 @@ def token_gradients(model, input_ids, target_embedding, input_slice):
         ],
         dim=1
     )
-    sentence_embedding = model(input_ids=full_embeds)
+    sentence_embedding = model(inputs_embeds=full_embeds)
 
     cosine_similarity = F.cosine_similarity(sentence_embedding, target_embedding)
     loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=model.device))
@@ -87,7 +87,7 @@ class GCG:
         self.args = args
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.model = SentenceSimilarityModel(args.model_path).to(self.device)  
+        self.model = SentenceEmbeddingModel(args.model_path).to(self.device)  
         self.tokenizer = AutoTokenizer.from_pretrained(args.model_path)
         # 下面俩不确定在SBERT中是否存在
         self.tokenizer.padding_side = 'left'
@@ -105,6 +105,7 @@ class GCG:
         self.early_stop_iterations = args.early_stop_iterations if hasattr(args, 'early_stop_iterations') else 200
         self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 50
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
+        self.no_space = False
         # self.test_prefixes = get_black_list()
         # self.gcg_prompt = get_templates(args.model_path, 'GCG')
         # self.chat_prompt = get_templates(args.model_path, 'chat')
@@ -128,8 +129,27 @@ class GCG:
         return cand_str, cand_toks
     
     #TODO: 确定了这个函数的使用场景之后再写loss函数：可以计算batch的loss
-    def get_loss(self, logits, target_tokens, loss_slice):
-        pass
+    def get_loss(self, question_embedding, target_embeddings):
+        """
+        get the loss between the question embedding and the target embeddings
+
+        Parameters
+        ----------
+        question_embedding : torch.tensor
+            The question embedding, [sentence_embedding_dim]
+        target_embeddings : torch.tensor
+            The target embeddings, 
+        
+        Returns
+        -------
+        torch.tensor
+            The loss between the question embedding and the target embeddings
+        """
+        pdb.set_trace()
+        cosine_similarity = F.cosine_similarity(target_embeddings, question_embedding.unsqueeze(1), dim=-1)
+        label = torch.ones_like(cosine_similarity, device=self.model.device)
+        loss = F.mse_loss(cosine_similarity, label, reduction='none')
+        return loss
 
     def get_filtered_cands(self, control_cand, tokenizer, curr_control=None):
         """
@@ -166,7 +186,6 @@ class GCG:
                     count += 1
             else:
                 count += 1
-        pdb.set_trace()
         not_valid_ratio = round(count / len(control_cand), 2)            
         print(f"Warning: {not_valid_ratio} control candidates were not valid")
 
@@ -204,7 +223,7 @@ class GCG:
     #TODO: 我应该将这里改为evluate PRAG
     def evaluate_matched(self, loss):
         if loss < self.loss_threshold:
-            return True
+            return False
 
     def run(self, target):
         self._nonascii_toks, self._ascii_toks = get_nonascii_toks(self.args.model_path, self.tokenizer)
@@ -245,7 +264,7 @@ class GCG:
             # ========= setup end tokens ========== # Pass
             # ========== setup question_embedding ========== # Pass, Just need to get the question's embedding
             print("The question is: ", self.question) 
-            question_embedding = self.model(self.question)
+            question_embedding = self.model(self.question).detach()
 
             self.model.zero_grad()
             input_ids = torch.tensor(toks, device=self.device)
@@ -298,7 +317,6 @@ class GCG:
                     
                 if i != 0:
                     input_ids[control_slice] = control_tokens
-
                 attack_steps += 1
                 grad = token_gradients(self.model, input_ids, target_embedding, control_slice)
                 averaged_grad = grad / grad.norm(dim=-1, keepdim=True)
@@ -329,8 +347,9 @@ class GCG:
                             inputs = tmp_input.unsqueeze(0)
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0)
-                    embeddings = get_embeddings(self.model, inputs)
-                    losses = self.get_loss(embeddings, target_embedding, control_slice)
+                    pdb.set_trace()
+                    target_embeddings = get_embeddings(self.model, inputs)
+                    losses = self.get_loss(question_embedding, target_embeddings)
                     del inputs, logits ; gc.collect()
                     losses[torch.isnan(losses)] = 999999
                     curr_best_loss, best_idx = torch.min(losses, dim=0)
