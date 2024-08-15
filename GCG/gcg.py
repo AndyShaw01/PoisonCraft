@@ -89,9 +89,9 @@ class GCG:
         self.args = args
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.model = SentenceEmbeddingModel(args.model_path).to(self.device)  
-        self.tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-        # 下面俩不确定在SBERT中是否存在
+        self.model_path = args.model_path
+        self.model = SentenceEmbeddingModel(self.model_path).to(self.device)  
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
         self.tokenizer.padding_side = 'left'
         self.tokenizer.pad_token = self.tokenizer.eos_token if self.tokenizer.pad_token is None else self.tokenizer.pad_token
         self.control_string_length = args.control_string_length
@@ -108,6 +108,7 @@ class GCG:
         self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 50
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
         self.no_space = False
+        # self.random = args.random
         self.setup()
         # self.test_prefixes = get_black_list()
         # self.gcg_prompt = get_templates(args.model_path, 'GCG')
@@ -117,12 +118,14 @@ class GCG:
     def setup(self):
         logging.basicConfig(
             level=logging.INFO, format='%(asctime)s %(message)s', datefmt='[%H:%M:%S]')
+
     def init_adv_postfix(self, random=False):
         """
         generate a fixed control string with the given length
         the control tokens can be randomly sampled from the following list
         """
         cand_toks = []
+        # pdb.set_trace()
         while len(cand_toks) != self.control_string_len:
             if random:
                 cand_list = ['!', 'the', 'of', 'and', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by',
@@ -133,6 +136,7 @@ class GCG:
             cand_str = ' '.join(cand)
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
         return cand_str, cand_toks
+
     
     def get_loss(self, question_embedding, target_embeddings, mode='mse',reduction='none'):
         """
@@ -251,7 +255,7 @@ class GCG:
             best_loss = 999999
             end_iter = False
             logging.info(f"Attack attempt {attack_attempt}")
-
+            # pdb.set_trace()
             control_tokens = []
             while len(control_tokens) != self.control_string_len:
                 # when random is true, sometimes the control token will not be tokenized as expected length
@@ -391,7 +395,6 @@ class GCG:
                         # pdb.set_trace()
                         success = self.evaluate_matched(tmp_loss)
                         if success:
-                            pdb.set_trace()
                             current_control_str = self.tokenizer.decode(tmp_input[control_slice.start: control_slice.stop])
                             # if the str start with space, remove the space
                             if current_control_str[0] == ' ':
