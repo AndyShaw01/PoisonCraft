@@ -16,3 +16,6 @@ def gcg_attack(args):
     gcg = GCG(args)
     target_sentence = pd.read_csv('./Dataset/infovector.csv')['text'].tolist()[args.index]
     optim_prompts, steps = gcg.run(target_sentence)
+    print("The target sentence is: ", target_sentence)
+    print("The optimized prompts are: ", optim_prompts)
+    print("The number of steps is: ", steps)

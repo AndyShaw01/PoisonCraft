@@ -8,11 +8,13 @@ from copy import deepcopy
 import pandas as pd
 import csv
 import pdb
+import logging
 from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           GPTJForCausalLM, GPTNeoXForCausalLM,
                           LlamaForCausalLM)
 from GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
 from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, SimilarityLoss, get_pooling_results
+# torch.autograd.set_detect_anomaly(True)
 def token_gradients(model, input_ids, target_embedding, input_slice):
     """
     Computes gradients of the loss with respect to the coordinates.
@@ -106,11 +108,15 @@ class GCG:
         self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 50
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
         self.no_space = False
+        self.setup()
         # self.test_prefixes = get_black_list()
         # self.gcg_prompt = get_templates(args.model_path, 'GCG')
         # self.chat_prompt = get_templates(args.model_path, 'chat')
         # self.end_tokens = get_end_tokens(args.model_path)
 
+    def setup(self):
+        logging.basicConfig(
+            level=logging.INFO, format='%(asctime)s %(message)s', datefmt='[%H:%M:%S]')
     def init_adv_postfix(self, random=False):
         """
         generate a fixed control string with the given length
@@ -128,7 +134,6 @@ class GCG:
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
         return cand_str, cand_toks
     
-    #TODO: 确定了这个函数的使用场景之后再写loss函数：可以计算batch的loss
     def get_loss(self, question_embedding, target_embeddings, reduction='none'):
         """
         get the loss between the question embedding and the target embeddings
@@ -187,7 +192,7 @@ class GCG:
             else:
                 count += 1
         not_valid_ratio = round(count / len(control_cand), 2)            
-        print(f"Warning: {not_valid_ratio} control candidates were not valid")
+        logging.info(f"Warning: {not_valid_ratio} control candidates were not valid")
 
         if not_valid_ratio > 0.1 and cands != []:
             cands = cands + [cands[-1]] * (len(control_cand) - len(cands))
@@ -239,11 +244,8 @@ class GCG:
             curr_optim_steps = []
             best_loss = 999999
             end_iter = False
-            print("*" * 40)
-            print("The current attak step is: ", attack_steps)
+            logging.info(f"Attack attempt {attack_attempt}")
 
-            # ========== setup system prompt ========== # PASS
-            # ========= setup control_tokens ========== #
             control_tokens = []
             while len(control_tokens) != self.control_string_len:
                 # when random is true, sometimes the control token will not be tokenized as expected length
@@ -259,29 +261,27 @@ class GCG:
                 toks = self.tokenizer(curr_prompt).input_ids
                 control_slice = slice(target_slice.stop, len(toks))
                 control_tokens = torch.tensor(toks[control_slice], device=self.device)
+            logging.info(f"Control string: {control_str}")
+            logging.info(f"Question string: {self.question}")
 
-            print("The control tokens are: ", control_tokens)
-            # ========= setup end tokens ========== # Pass
-            # ========== setup question_embedding ========== # Pass, Just need to get the question's embedding
-            print("The question is: ", self.question) 
             question_embedding = self.model(self.question).detach()
 
             self.model.zero_grad()
             input_ids = torch.tensor(toks, device=self.device)
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
             
-            # ========== setup initial loss========== # Pass
-            cosine_similarity = F.cosine_similarity(question_embedding, target_embedding)
-            initial_loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
-            print("The initial loss is: ", initial_loss)
+            # ========== setup initial loss========== # 
+            initial_loss = self.get_loss(question_embedding, target_embedding)
+
+            logging.info(f"Initial loss: {initial_loss.item()}")
 
             success = self.evaluate_matched(initial_loss)
             if success:
                 update_toks = 0
-                print("Your bad info is matched!")
+                logging.info("Your bad info is matched!")
                 curr_optim_prompts.append(control_str)
                 curr_optim_steps.append(attack_steps)
-                print("Current success prompt number:", len(curr_optim_prompts))
+                logging.info("Current success prompt number: {}".format(len(curr_optim_prompts)))
 
                 if len(curr_optim_prompts) >= self.max_prompts_in_single_attack:
                     end_iter = True
@@ -299,26 +299,26 @@ class GCG:
 
                 # The loss is too high for a long time
                 if self.early_stop and i > self.early_stop_iterations and best_loss > self.loss_threshold:
-                    print('early stop by loss at {}-th step'.format(i))
+                    logging.info('early stop by loss at {}-th step'.format(i))
                     break
 
                 # The loss does not decrease for a long time
                 if self.early_stop and local_optim_counter >= self.early_stop_local_optim:
-                    print("early stop by local optim at {}-th step".format(i))
+                    logging.info("early stop by local optim at {}-th step".format(i))
                     break   
 
                 if end_iter: 
-                    print("End the current iteration because the maximum number of prompts is reached")
+                    logging.info("End the iteration")
                     break 
                 
                 if attack_steps >= self.max_attack_steps:
-                    print("Reach the maximum attack steps")
+                    logging.info("Reach the maximum attack steps")
                     break
                     
                 if i != 0:
                     input_ids[control_slice] = control_tokens
                 attack_steps += 1
-                grad = token_gradients(self.model, input_ids, target_embedding, control_slice)
+                grad = token_gradients(self.model, input_ids, target_embedding.detach(), control_slice)
                 averaged_grad = grad / grad.norm(dim=-1, keepdim=True)
 
                 candidates = []
@@ -352,19 +352,17 @@ class GCG:
                     target_embeddings = get_pooling_results(target_token_embeddings, encoded_input['attention_mask'])
                     losses = self.get_loss(question_embedding, target_embeddings)
                     del inputs ; gc.collect()
-                    pdb.set_trace()
                     losses[torch.isnan(losses)] = 999999
                     curr_best_loss, best_idx = torch.min(losses, dim=0)
                     curr_best_control_tokens = candidates[best_idx]
                 
-                print("current best loss:", curr_best_loss.item())
+                logging.info("current best loss: {}".format(curr_best_loss.item()))
                 if curr_best_loss < best_loss:
                     update_toks += 1
                     local_optim_counter = 0
                     best_loss = curr_best_loss
                     control_tokens = deepcopy(curr_best_control_tokens)
-
-                    print("Step: {}, Loss: {}".format(i, best_loss.data.item()))
+                    logging.info("Step: {}, Loss: {}".format(i, best_loss.data.item()))
 
                     # test the can we matched the bad info, using the best control tokens 
                     tmp_input = input_ids.clone()
@@ -375,12 +373,11 @@ class GCG:
 
                     # The final test for the attack adv parts
                     if curr_best_loss < self.loss_threshold and update_toks >= self.update_token_threshold:
-                        print('**********')
                         target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
                         cosine_similarity = F.cosine_similarity(question_embedding, target_embedding)
                         tmp_loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
 
-                        print("The tmp loss is: ", tmp_loss)
+                        logging.info("The tmp loss is: {}".format(tmp_loss.data.item()))
                         success = self.evaluate_matched(tmp_loss)
                         if success:
                             current_control_str = self.tokenizer.decode(tmp_input[control_slice.start: control_slice.stop])
@@ -392,51 +389,49 @@ class GCG:
                             else:
                                 current_control_str = self.question + ' ' + current_control_str
                             
-                            print("Current_control_str:", current_control_str)
+                            logging.info("Current control string: {}".format(current_control_str))
                             embedding = self.model([current_control_str])
                             cosine_similarity = F.cosine_similarity(question_embedding, embedding)
                             loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
                             success = self.evaluate_matched(loss)
                             if success:
                                 update_toks = 0
-                                print("Attack success, append the current trigger to optim_prompts")
+                                logging.info("Attack success, append the current trigger to optim_prompts")
                                 curr_optim_prompts.append(current_control_str)
                                 curr_optim_steps.append(attack_steps)
-                                print("Current success prompt number:", len(curr_optim_prompts))
-                                
+                                logging.info("Current success prompt number: {}".format(len(curr_optim_prompts)))
                                 if len(curr_optim_prompts) >= self.max_prompts_in_single_attack:
                                     end_iter = True
                                     
                                 if len(optim_prompts) + len(curr_optim_prompts) >= self.max_successful_prompt:
                                     end_iter = True
-
-                        print('**********')
                 
                 else:
                     if isinstance(best_loss, int):
                         print("After {} iterations, the best loss is still int".format(i, best_loss))
+                        logging.info("After {} iterations, the best loss is still int".format(i, best_loss))
                     else:
-                        print("After {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
+                        logging.info("After {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
                     local_optim_counter += 1
 
                 del candidates, tmp_input, losses ; gc.collect()
                 self.model.zeio_grad()
 
                 step_end_time = time.time()
-                print("Time for this step: ", step_end_time - step_time)
+                # logging.info("Time for this step: {}".format(step_end_time - step_time))
             
             if isinstance(best_loss, int):
-                print("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss))
+                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss))
             else:
-                print("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
-            print('In {} attemp, number of optim prompts is: {}'.format(attack_attempt, len(curr_optim_prompts)))
+                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
+            logging.info('In {} attemp, number of optim prompts is: {}'.format(attack_attempt, len(curr_optim_prompts)))
 
             optim_prompts.extend(curr_optim_prompts)
             optim_steps.extend(curr_optim_steps)
             
-            print('After {} attemp, the total number of optim prompts is: {}'.format(attack_attempt, len(optim_prompts)))
+            logging.info('After {} attemp, the total number of optim prompts is: {}'.format(attack_attempt, len(optim_prompts)))
         
         end_time = time.time()
-        print("Total time: ", end_time - curr_time)
+        logging.info("Total time: {}".format(end_time - curr_time))
         
         return optim_prompts, optim_steps
