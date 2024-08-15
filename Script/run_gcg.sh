@@ -21,4 +21,4 @@ if [ "$ADD_EOS" = "True" ]; then
 fi
 
 
-python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX 
+python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX > "$LOG_PATH/gcg_${INDEX}.log" 2>&1

@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--add_eos", action='store_true')
     parser.add_argument("--eos_num", type=int, default=10)
     parser.add_argument("--run_index", type=int, default=1)
-    parser.add_argument("--loss_threshold", type=float, default=0.6)
+    parser.add_argument("--loss_threshold", type=float, default=0.5)
 
     args = parser.parse_args()
     

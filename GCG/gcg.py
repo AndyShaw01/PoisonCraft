@@ -228,6 +228,8 @@ class GCG:
     #TODO: 我应该将这里改为evluate PRAG
     def evaluate_matched(self, loss):
         if loss < self.loss_threshold:
+            return True
+        else:
             return False
 
     def run(self, target):
@@ -276,6 +278,8 @@ class GCG:
             logging.info(f"Initial loss: {initial_loss.item()}")
 
             success = self.evaluate_matched(initial_loss)
+            if attack_attempt == 1:
+                success = False
             if success:
                 update_toks = 0
                 logging.info("Your bad info is matched!")
@@ -378,6 +382,7 @@ class GCG:
                         tmp_loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
 
                         logging.info("The tmp loss is: {}".format(tmp_loss.data.item()))
+                        # pdb.set_trace()
                         success = self.evaluate_matched(tmp_loss)
                         if success:
                             current_control_str = self.tokenizer.decode(tmp_input[control_slice.start: control_slice.stop])
@@ -404,8 +409,7 @@ class GCG:
                                     end_iter = True
                                     
                                 if len(optim_prompts) + len(curr_optim_prompts) >= self.max_successful_prompt:
-                                    end_iter = True
-                
+                                    end_iter = True                
                 else:
                     if isinstance(best_loss, int):
                         print("After {} iterations, the best loss is still int".format(i, best_loss))
@@ -420,6 +424,7 @@ class GCG:
                 step_end_time = time.time()
                 # logging.info("Time for this step: {}".format(step_end_time - step_time))
             
+            # pdb.set_trace()
             if isinstance(best_loss, int):
                 logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss))
             else:
