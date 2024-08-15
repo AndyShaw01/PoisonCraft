@@ -134,7 +134,7 @@ class GCG:
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
         return cand_str, cand_toks
     
-    def get_loss(self, question_embedding, target_embeddings, reduction='none'):
+    def get_loss(self, question_embedding, target_embeddings, mode='mse',reduction='none'):
         """
         get the loss between the question embedding and the target embeddings
 
@@ -151,8 +151,12 @@ class GCG:
             The loss between the question embedding and the target embeddings
         """
         cosine_similarity = F.cosine_similarity(target_embeddings, question_embedding)
+        # pdb.set_trace()
         label = torch.ones_like(cosine_similarity, device=self.model.device)
-        loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
+        if mode == 'mse':
+            loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
+        else:
+            loss = 1 - cosine_similarity
         # loss = F.mse_loss(cosine_similarity, label)
         return loss
 
@@ -265,6 +269,7 @@ class GCG:
                 control_tokens = torch.tensor(toks[control_slice], device=self.device)
             logging.info(f"Control string: {control_str}")
             logging.info(f"Question string: {self.question}")
+            logging.info(f"Current prompt: {curr_prompt}")
 
             question_embedding = self.model(self.question).detach()
 
@@ -273,6 +278,7 @@ class GCG:
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
             
             # ========== setup initial loss========== # 
+            
             initial_loss = self.get_loss(question_embedding, target_embedding)
 
             logging.info(f"Initial loss: {initial_loss.item()}")
@@ -385,14 +391,15 @@ class GCG:
                         # pdb.set_trace()
                         success = self.evaluate_matched(tmp_loss)
                         if success:
+                            pdb.set_trace()
                             current_control_str = self.tokenizer.decode(tmp_input[control_slice.start: control_slice.stop])
                             # if the str start with space, remove the space
                             if current_control_str[0] == ' ':
                                 current_control_str = current_control_str[1: ]
                             if self.no_space:
-                                urrent_control_str = self.question + current_control_str
+                                urrent_control_str = target + current_control_str
                             else:
-                                current_control_str = self.question + ' ' + current_control_str
+                                current_control_str = target + ' ' + current_control_str
                             
                             logging.info("Current control string: {}".format(current_control_str))
                             embedding = self.model([current_control_str])
