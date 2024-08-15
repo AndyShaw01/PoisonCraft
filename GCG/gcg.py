@@ -12,7 +12,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           GPTJForCausalLM, GPTNeoXForCausalLM,
                           LlamaForCausalLM)
 from GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
-from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, SimilarityLoss
+from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, SimilarityLoss, get_pooling_results
 def token_gradients(model, input_ids, target_embedding, input_slice):
     """
     Computes gradients of the loss with respect to the coordinates.
@@ -129,7 +129,7 @@ class GCG:
         return cand_str, cand_toks
     
     #TODO: 确定了这个函数的使用场景之后再写loss函数：可以计算batch的loss
-    def get_loss(self, question_embedding, target_embeddings):
+    def get_loss(self, question_embedding, target_embeddings, reduction='none'):
         """
         get the loss between the question embedding and the target embeddings
 
@@ -145,10 +145,10 @@ class GCG:
         torch.tensor
             The loss between the question embedding and the target embeddings
         """
-        pdb.set_trace()
-        cosine_similarity = F.cosine_similarity(target_embeddings, question_embedding.unsqueeze(1), dim=-1)
+        cosine_similarity = F.cosine_similarity(target_embeddings, question_embedding)
         label = torch.ones_like(cosine_similarity, device=self.model.device)
-        loss = F.mse_loss(cosine_similarity, label, reduction='none')
+        loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
+        # loss = F.mse_loss(cosine_similarity, label)
         return loss
 
     def get_filtered_cands(self, control_cand, tokenizer, curr_control=None):
@@ -347,10 +347,12 @@ class GCG:
                             inputs = tmp_input.unsqueeze(0)
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0)
-                    pdb.set_trace()
-                    target_embeddings = get_embeddings(self.model, inputs)
+                    target_token_embeddings = get_embeddings(self.model, inputs)
+                    encoded_input = {'attention_mask': (target_token_embeddings != 0).any(dim=-1).long()}
+                    target_embeddings = get_pooling_results(target_token_embeddings, encoded_input['attention_mask'])
                     losses = self.get_loss(question_embedding, target_embeddings)
-                    del inputs, logits ; gc.collect()
+                    del inputs ; gc.collect()
+                    pdb.set_trace()
                     losses[torch.isnan(losses)] = 999999
                     curr_best_loss, best_idx = torch.min(losses, dim=0)
                     curr_best_control_tokens = candidates[best_idx]
