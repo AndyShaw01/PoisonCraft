@@ -1,7 +1,6 @@
 import torch
 
-from transformers import (BertModel, RobertaModel)
-from transformers.models.mpnet.modeling_mpnet import MPNetModel
+from transformers import (BertModel, RobertaModel, T5EncoderModel, MPNetModel)
 from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           GPTJForCausalLM, GPTNeoXForCausalLM,
                           LlamaForCausalLM, MptForCausalLM, Qwen2ForCausalLM, 
@@ -59,6 +58,8 @@ def get_embedding_weight(model):
     # encode items and get the max length
     if isinstance(model, MPNetModel) or isinstance(model, RobertaModel):
         return model.get_input_embeddings().weight
+    elif isinstance(model, T5EncoderModel):
+        return model.shared.weight
     else:
         raise ValueError(f"Unknown model type: {type(model)}")
 
@@ -69,12 +70,16 @@ def get_embeddings(model, input_ids):
     # encode items and get the max length
     if isinstance(model, MPNetModel) or isinstance(model, RobertaModel):
         return model.embeddings.word_embeddings(input_ids).half()
+    elif isinstance(model, T5EncoderModel):
+        return model.shared(input_ids).half()
     else:
         raise ValueError(f"Unknown model type: {type(model)}")
 
 def get_fixed_list(model_path):
-    if 'SBERT' in model_path:
+    if 'MPNetModel' in model_path:
         return ['!']
+    elif 't5' in model_path:
+        return ['*']
     else:
         raise ValueError(f"Unknown model type: {model_path}")
     
