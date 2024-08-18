@@ -154,11 +154,11 @@ class GCG:
             The loss between the question embedding and the target embeddings
         """
         cosine_similarity = F.cosine_similarity(target_embeddings, question_embedding)
-        # pdb.set_trace()
         label = torch.ones_like(cosine_similarity, device=self.model.device)
         if mode == 'mse':
             loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
-        # loss = F.mse_loss(cosine_similarity, label)
+        else:
+            ValueError("The mode is not supported")
         return loss
 
     def get_filtered_cands(self, control_cand, tokenizer, curr_control=None):
