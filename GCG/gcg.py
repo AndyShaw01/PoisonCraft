@@ -181,18 +181,22 @@ class GCG:
         
         cands, count = [], 0
         for i in range(control_cand.shape[0]):
-            decoded_str = tokenizer.decode(control_cand[i], skip_special_tokens=True)
-            # print("decoded_str": decoded_str)
-            encoded_toks = tokenizer(decoded_str, add_special_tokens=False).input_ids
-            encoded_toks = torch.tensor(encoded_toks, device=control_cand.device)
+            try:
+                decoded_str = tokenizer.decode(control_cand[i], skip_special_tokens=True)
+                # print("decoded_str": decoded_str)
+                encoded_toks = tokenizer(decoded_str, add_special_tokens=False).input_ids
+                encoded_toks = torch.tensor(encoded_toks, device=control_cand.device)
 
-            if len(control_cand[i]) == len(encoded_toks) and not torch.all(torch.eq(control_cand[i], curr_control)):
-                # Important! add this to mitagate the situation that the encoded_tok is not equal to the origin one
-                if torch.all(torch.eq(control_cand[i], encoded_toks)):
-                    cands.append(control_cand[i])
+                if len(control_cand[i]) == len(encoded_toks) and not torch.all(torch.eq(control_cand[i], curr_control)):
+                    # Important! add this to mitagate the situation that the encoded_tok is not equal to the origin one
+                    if torch.all(torch.eq(control_cand[i], encoded_toks)):
+                        cands.append(control_cand[i])
+                    else:
+                        count += 1
                 else:
                     count += 1
-            else:
+            except IndexError:
+                logging.error(f"IndexError: piece id is out of range for candidate at index {i}")
                 count += 1
         not_valid_ratio = round(count / len(control_cand), 2)            
         logging.info(f"Warning: {not_valid_ratio} control candidates were not valid")
