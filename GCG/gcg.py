@@ -14,28 +14,27 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           LlamaForCausalLM)
 from GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
 from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, get_pooling_results
-# torch.autograd.set_detect_anomaly(True)
-def token_gradients(model, input_ids, target_embedding, input_slice):
+
+def token_gradients(model, input_ids, target_embedding, control_slice):
     """
     Computes gradients of the loss with respect to the coordinates.
 
     Args:
         model: The model to compute the gradients with respect to.
         input_ids: The input ids.
-        target_embedding: The target embedding.
-        input_slice: The slice of the input to compute the gradients with respect to.
+        target_embedding: The target embedding to calculate the loss
+        control_slice: The slice of the input to compute the gradients with respect to.
     """
-
     embed_weights = get_embedding_weight(model)
     one_hot = torch.zeros(
-        input_ids[input_slice].shape[0],
+        input_ids[control_slice].shape[0],
         embed_weights.shape[0],
         device=model.device,
         dtype=embed_weights.dtype
     )
     one_hot.scatter_(
         1,
-        input_ids[input_slice].unsqueeze(1),
+        input_ids[control_slice].unsqueeze(1),
         torch.ones(one_hot.shape[0], 1, device=model.device, dtype=embed_weights.dtype)
     )
     one_hot.requires_grad_()
@@ -45,9 +44,9 @@ def token_gradients(model, input_ids, target_embedding, input_slice):
     embeds = get_embeddings(model, input_ids.unsqueeze(0)).detach()
     full_embeds = torch.cat(
         [
-            embeds[:, :input_slice.start, :],
+            embeds[:, :control_slice.start, :],
             input_embeds,
-            embeds[:, input_slice.stop:, :]
+            embeds[:, control_slice.stop:, :]
         ],
         dim=1
     )
@@ -125,7 +124,6 @@ class GCG:
         the control tokens can be randomly sampled from the following list
         """
         cand_toks = []
-        # pdb.set_trace()
         while len(cand_toks) != self.control_string_len:
             if random:
                 cand_list = ['!', 'the', 'of', 'and', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by',
@@ -257,14 +255,14 @@ class GCG:
                 # so we need to check the length of the control token
                 curr_prompt = target
                 toks = self.tokenizer(curr_prompt).input_ids
-                target_slice = slice(0, len(toks))
+                target_slice = slice(1, len(toks)-1)
                 control_str, _ = self.init_adv_postfix()
                 if self.no_space: # 不同的LLM之间的小区别，如果跑Llama3，需要测试是不是需要加。tokenizer 会自动减空格
                     curr_prompt = curr_prompt + control_str
                 else:
                     curr_prompt = curr_prompt + ' ' + control_str
                 toks = self.tokenizer(curr_prompt).input_ids
-                control_slice = slice(target_slice.stop, len(toks))
+                control_slice = slice(target_slice.stop, len(toks)-1)
                 control_tokens = torch.tensor(toks[control_slice], device=self.device)
             logging.info(f"Control string: {control_str}")
             logging.info(f"Question string: {self.question}")
@@ -282,8 +280,6 @@ class GCG:
             logging.info(f"Initial loss: {initial_loss.item()}")
 
             success = self.evaluate_matched(initial_loss)
-            if attack_attempt == 1:
-                success = False
             if success:
                 update_toks = 0
                 logging.info("Your bad info is matched!")
@@ -333,7 +329,6 @@ class GCG:
                 batch_size = 128
                 topk = 64
                 filter_cand=True
-
                 with torch.no_grad():
                     control_cand = self.sample_control(averaged_grad, control_tokens, batch_size, topk)
                     if filter_cand:
@@ -355,15 +350,16 @@ class GCG:
                             inputs = tmp_input.unsqueeze(0)
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0)
-                    target_token_embeddings = get_embeddings(self.model, inputs)
-                    encoded_input = {'attention_mask': (target_token_embeddings != 0).any(dim=-1).long()}
-                    target_embeddings = get_pooling_results(target_token_embeddings, encoded_input['attention_mask'])
+                    # target_token_embeddings = get_embeddings(self.model, inputs)
+                    target_embeddings = self.model(input_ids=inputs)
+                    # encoded_input = {'attention_mask': (target_token_embeddings != 0).any(dim=-1).long()}
+                    # target_embeddings = get_pooling_results(target_token_embeddings, encoded_input['attention_mask'])
                     losses = self.get_loss(question_embedding, target_embeddings)
-                    del inputs ; gc.collect()
+                    # del inputs ; gc.collect()
                     losses[torch.isnan(losses)] = 999999
                     curr_best_loss, best_idx = torch.min(losses, dim=0)
                     curr_best_control_tokens = candidates[best_idx]
-                
+                    del inputs ; gc.collect()
                 logging.info("current best loss: {}".format(curr_best_loss.item()))
                 if curr_best_loss < best_loss:
                     update_toks += 1
@@ -386,7 +382,6 @@ class GCG:
                         tmp_loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
 
                         logging.info("The tmp loss is: {}".format(tmp_loss.data.item()))
-                        # pdb.set_trace()
                         success = self.evaluate_matched(tmp_loss)
                         if success:
                             current_control_str = self.tokenizer.decode(tmp_input[control_slice.start: control_slice.stop])
@@ -416,7 +411,6 @@ class GCG:
                                     end_iter = True                
                 else:
                     if isinstance(best_loss, int):
-                        print("After {} iterations, the best loss is still int".format(i, best_loss))
                         logging.info("After {} iterations, the best loss is still int".format(i, best_loss))
                     else:
                         logging.info("After {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
@@ -428,7 +422,6 @@ class GCG:
                 step_end_time = time.time()
                 # logging.info("Time for this step: {}".format(step_end_time - step_time))
             
-            # pdb.set_trace()
             if isinstance(best_loss, int):
                 logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss))
             else:
