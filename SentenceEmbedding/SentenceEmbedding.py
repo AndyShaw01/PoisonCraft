@@ -31,7 +31,7 @@ class SentenceEmbeddingModel(nn.Module):
             self.tokenizer = MPNetTokenizer.from_pretrained(model_path)
         elif "t5" in model_path:
             self.model = T5EncoderModel.from_pretrained(model_path)
-            self.tokenizer = T5Tokenizer.from_pretrained(model_path)
+            self.tokenizer = T5Tokenizer.from_pretrained(model_path, legacy=False)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     def forward(self, sentences=None, input_ids=None, inputs_embeds=None):
