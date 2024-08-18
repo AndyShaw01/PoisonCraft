@@ -1,9 +1,9 @@
-from transformers import AutoModel, AutoTokenizer, MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer
-
-from sentence_transformers.models import Pooling
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer
+from sentence_transformers.models import Pooling
 
 import pdb
 
@@ -28,7 +28,7 @@ class SentenceEmbeddingModel(nn.Module):
         super(SentenceEmbeddingModel, self).__init__()
         if "MPNetModel" in model_path:
             self.model = MPNetModel.from_pretrained(model_path)
-            self.model = MPNetTokenizer.from_pretrained(model_path)
+            self.tokenizer = MPNetTokenizer.from_pretrained(model_path)
         elif "t5" in model_path:
             self.model = T5EncoderModel.from_pretrained(model_path)
             self.tokenizer = T5Tokenizer.from_pretrained(model_path)
@@ -56,21 +56,6 @@ class SentenceEmbeddingModel(nn.Module):
         Zero out the gradients of the model's parameters.
         """
         self.model.zero_grad()
-
-# Loss function based on cosine similarity
-class SimilarityLoss(nn.Module):
-    def __init__(self):
-        super(SimilarityLoss, self).__init__()
-
-    def forward(self, embedding1, embedding2):
-        # Compute cosine similarity
-        cosine_similarity = F.cosine_similarity(embedding1, embedding2)
-        # Loss is 1 - similarity
-        loss = 1 - cosine_similarity
-        pdb.set_trace()
-        # Average the loss over the batch
-        return loss.mean()
-
 
 if __name__ == "__main__":
     # Example sentences A and B
