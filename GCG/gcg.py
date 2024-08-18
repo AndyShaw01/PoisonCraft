@@ -13,7 +13,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           GPTJForCausalLM, GPTNeoXForCausalLM,
                           LlamaForCausalLM)
 from GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
-from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, SimilarityLoss, get_pooling_results
+from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, get_pooling_results
 # torch.autograd.set_detect_anomaly(True)
 def token_gradients(model, input_ids, target_embedding, input_slice):
     """
@@ -91,7 +91,7 @@ class GCG:
 
         self.model_path = args.model_path
         self.model = SentenceEmbeddingModel(self.model_path).to(self.device)  
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+        self.tokenizer = self.model.tokenizer
         self.tokenizer.padding_side = 'left'
         self.tokenizer.pad_token = self.tokenizer.eos_token if self.tokenizer.pad_token is None else self.tokenizer.pad_token
         self.control_string_length = args.control_string_length
@@ -233,7 +233,6 @@ class GCG:
         new_control_toks = original_control_toks.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
         return new_control_toks
     
-    #TODO: 我应该将这里改为evluate PRAG
     def evaluate_matched(self, loss):
         if loss < self.loss_threshold:
             return True
@@ -255,7 +254,6 @@ class GCG:
             best_loss = 999999
             end_iter = False
             logging.info(f"Attack attempt {attack_attempt}")
-            # pdb.set_trace()
             control_tokens = []
             while len(control_tokens) != self.control_string_len:
                 # when random is true, sometimes the control token will not be tokenized as expected length
@@ -264,7 +262,7 @@ class GCG:
                 toks = self.tokenizer(curr_prompt).input_ids
                 target_slice = slice(0, len(toks))
                 control_str, _ = self.init_adv_postfix()
-                if self.no_space:
+                if self.no_space: # 不同的LLM之间的小区别，如果跑Llama3，需要测试是不是需要加。tokenizer 会自动减空格
                     curr_prompt = curr_prompt + control_str
                 else:
                     curr_prompt = curr_prompt + ' ' + control_str
@@ -282,7 +280,6 @@ class GCG:
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
             
             # ========== setup initial loss========== # 
-            
             initial_loss = self.get_loss(question_embedding, target_embedding)
 
             logging.info(f"Initial loss: {initial_loss.item()}")
