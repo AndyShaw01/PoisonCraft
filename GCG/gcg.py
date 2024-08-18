@@ -137,7 +137,6 @@ class GCG:
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
         return cand_str, cand_toks
 
-    
     def get_loss(self, question_embedding, target_embeddings, mode='mse',reduction='none'):
         """
         get the loss between the question embedding and the target embeddings
@@ -159,8 +158,6 @@ class GCG:
         label = torch.ones_like(cosine_similarity, device=self.model.device)
         if mode == 'mse':
             loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
-        else:
-            loss = 1 - cosine_similarity
         # loss = F.mse_loss(cosine_similarity, label)
         return loss
 
