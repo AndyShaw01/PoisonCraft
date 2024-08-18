@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_path', type=str, default='/data1/shaoyangguang/offline_model/SBERT', 
                         help='target model path')
     parser.add_argument("--control_string_length", type=int, default=20) # check: 20*, Llama: 20! control string length
-    parser.add_argument("--max_attack_steps", type=int, default=500)     # 
+    parser.add_argument("--max_attack_steps", type=int, default=2000)     # 
     parser.add_argument("--early_stop", type=bool, default=True)        # 
     parser.add_argument("--max_steps", type=int, default=500)            # 
     parser.add_argument("--max_attack_attempts", type=int, default=10)    # rerun, try, if >20, 30 -> rerun
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--add_eos", action='store_true')
     parser.add_argument("--eos_num", type=int, default=10)
     parser.add_argument("--run_index", type=int, default=1)
-    # parser.add_argument("--loss_threshold", type=float, default=0.1)
+    parser.add_argument("--loss_threshold", type=float, default=0.1)
     # parser.add_argument("--random", type=bool, default=False)
 
     args = parser.parse_args()
