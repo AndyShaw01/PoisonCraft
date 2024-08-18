@@ -15,9 +15,9 @@ elif [ "$MODEL" = "MPNetModel" ]; then
 fi
 
 if [ "$ADD_EOS" = "True" ]; then
-    LOG_PATH="Logs/${MODEL_PATH}/GCG_eos-${RUN_INDEX}"
+    LOG_PATH="Logs/${MODEL}/GCG_${RUN_INDEX}"
 else
-    LOG_PATH="Logs/${MODEL_PATH}/GCG-${RUN_INDEX}"
+    LOG_PATH="Logs/${MODEL}/GCG-${RUN_INDEX}"
 fi
 
 mkdir -p "$LOG_PATH"
