@@ -350,10 +350,8 @@ class GCG:
                             inputs = tmp_input.unsqueeze(0)
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0)
-                    # target_token_embeddings = get_embeddings(self.model, inputs)
+
                     target_embeddings = self.model(input_ids=inputs)
-                    # encoded_input = {'attention_mask': (target_token_embeddings != 0).any(dim=-1).long()}
-                    # target_embeddings = get_pooling_results(target_token_embeddings, encoded_input['attention_mask'])
                     losses = self.get_loss(question_embedding, target_embeddings)
                     # del inputs ; gc.collect()
                     losses[torch.isnan(losses)] = 999999
