@@ -45,7 +45,6 @@ class SentenceEmbeddingModel(nn.Module):
             model_output = self.model(inputs_embeds=inputs_embeds)
             encoded_input = {'attention_mask': (inputs_embeds != 0).any(dim=-1).long()}
         elif input_ids is not None:  # Calculate embeddings from input ids
-            pdb.set_trace()
             model_output = self.model(input_ids=input_ids)
             encoded_input = {'attention_mask': input_ids != 0}
         else:

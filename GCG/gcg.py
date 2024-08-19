@@ -15,14 +15,14 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
 from GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
 from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, get_pooling_results
 
-def token_gradients(model, input_ids, target_embedding, control_slice):
+def token_gradients(model, input_ids, question_embedding, control_slice):
     """
     Computes gradients of the loss with respect to the coordinates.
 
     Args:
         model: The model to compute the gradients with respect to.
         input_ids: The input ids.
-        target_embedding: The target embedding to calculate the loss
+        question_embedding: The question embedding to calculate the loss
         control_slice: The slice of the input to compute the gradients with respect to.
     """
     embed_weights = get_embedding_weight(model)
@@ -52,7 +52,7 @@ def token_gradients(model, input_ids, target_embedding, control_slice):
     )
     sentence_embedding = model(inputs_embeds=full_embeds)
 
-    cosine_similarity = F.cosine_similarity(sentence_embedding, target_embedding)
+    cosine_similarity = F.cosine_similarity(sentence_embedding, question_embedding)
     loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=model.device))
     loss.backward()
 
@@ -245,7 +245,6 @@ class GCG:
         optim_steps = []
         attack_attempt = 0
         attack_steps = 0
-
         while len(optim_prompts) < self.max_successful_prompt and attack_attempt < self.max_attack_attempts and attack_steps < self.max_attack_steps:
             attack_attempt += 1
             curr_optim_prompts = []
@@ -326,7 +325,7 @@ class GCG:
                 if i != 0:
                     input_ids[control_slice] = control_tokens
                 attack_steps += 1
-                grad = token_gradients(self.model, input_ids, target_embedding.detach(), control_slice)
+                grad = token_gradients(self.model, input_ids, question_embedding.detach(), control_slice)
                 averaged_grad = grad / grad.norm(dim=-1, keepdim=True)
 
                 candidates = []
@@ -354,7 +353,6 @@ class GCG:
                             inputs = tmp_input.unsqueeze(0)
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0)
-
                     target_embeddings = self.model(input_ids=inputs)
                     losses = self.get_loss(question_embedding, target_embeddings)
                     # del inputs ; gc.collect()
