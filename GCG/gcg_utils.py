@@ -60,6 +60,11 @@ def get_embedding_weight(model):
         return model.get_input_embeddings().weight
     elif isinstance(model, T5EncoderModel):
         return model.shared.weight
+    elif isinstance(model, BertModel):
+        if hasattr(model, 'name_or_path') and 'contriever' in model.name_or_path:
+            return model.get_input_embeddings().weight
+        else:# other bert models
+            return model.get_input_embeddings().weight
     else:
         raise ValueError(f"Unknown model type: {type(model)}")
 
@@ -72,6 +77,11 @@ def get_embeddings(model, input_ids):
         return model.embeddings.word_embeddings(input_ids).half()
     elif isinstance(model, T5EncoderModel):
         return model.shared(input_ids).half()
+    elif isinstance(model, BertModel):
+        if hasattr(model, 'name_or_path') and 'contriever' in model.name_or_path:
+            return model.embeddings.word_embeddings(input_ids).half()
+        else:# other bert models
+            return model.embeddings.word_embeddings(input_ids).half()
     else:
         raise ValueError(f"Unknown model type: {type(model)}")
 
@@ -80,6 +90,8 @@ def get_fixed_list(model_path):
         return ['!']
     elif 't5' in model_path:
         return ['*']
+    elif 'contriever' in model_path:
+        return ['!']
     else:
         raise ValueError(f"Unknown model type: {model_path}")
     
