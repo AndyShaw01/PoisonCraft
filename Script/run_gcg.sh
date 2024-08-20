@@ -1,23 +1,23 @@
 #!/bin/bash
 
 # MODEL="t5-base"
-MODEL="MPNetModel"
-# MODEL="contriever"
+# MODEL="MPNetModel"
+MODEL="contriever"
 PYTHON_SCRIPT="Experiments/gcg_exp.py"
-RUN_MODE="Test"
+RUN_MODE="Run" #Test
 
 ADD_EOS=False
 RUN_INDEX=1
 INDEX=0
 
 if [ "$MODEL" = "t5-base" ]; then
-    LOSS_THRESHOLD=0.05
+    LOSS_THRESHOLD=0.015
     MODEL_PATH="/data1/shaoyangguang/offline_model/t5-base"
 elif [ "$MODEL" = "MPNetModel" ]; then
-    LOSS_THRESHOLD=0.1
+    LOSS_THRESHOLD=0.025
     MODEL_PATH="/data1/shaoyangguang/offline_model/MPNetModel"
 elif [ "$MODEL" = "contriever" ]; then
-    LOSS_THRESHOLD=0.1
+    LOSS_THRESHOLD=0.025
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
 fi
 
@@ -36,11 +36,13 @@ if [ "$ADD_EOS" = "True" ]; then
 fi
 
 if [ "$RUN_MODE" = "Test" ]; then
-    python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX
+    python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD
 else
     if [ "$MODEL" = "t5-base" ]; then
-        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_5*.log" 2>&1
+        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_t5.log" 2>&1
     elif [ "$MODEL" = "MPNetModel" ]; then
-        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_5!.log" 2>&1
+        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_mp.log" 2>&1
+    elif [ "$MODEL" = "contriever" ]; then
+        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_ct.log" 2>&1
     fi
 fi
