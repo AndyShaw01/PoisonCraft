@@ -109,6 +109,7 @@ class GCG:
         self.no_space = False
         # self.random = args.random
         self.setup()
+        self.product_threshold = args.product_threshold
         # self.test_prefixes = get_black_list()
         # self.gcg_prompt = get_templates(args.model_path, 'GCG')
         # self.chat_prompt = get_templates(args.model_path, 'chat')
@@ -232,11 +233,21 @@ class GCG:
         new_control_toks = original_control_toks.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
         return new_control_toks
     
-    def evaluate_matched(self, loss):
-        if loss < self.loss_threshold:
-            return True
-        else:
-            return False
+    def evaluate_matched(self, loss=None, question_embedding=None, target_embedding=None, mode="product"):
+        if mode == "product":
+            product = question_embedding @ target_embedding.T
+            logging.info(f"dot product_similarity:\t{product}")
+            if product > self.product_threshold:
+                return True
+            else:
+                return False
+        elif mode == "loss":
+            product = question_embedding @ target_embedding.T
+            logging.info(f"dot product_similarity:\t{product}")
+            if loss < self.loss_threshold:
+                return True
+            else:
+                return False
 
     def run(self, target):
         self._nonascii_toks, self._ascii_toks = get_nonascii_toks(self.args.model_path, self.tokenizer)
@@ -245,6 +256,7 @@ class GCG:
         optim_steps = []
         attack_attempt = 0
         attack_steps = 0
+        store_control_str = None
         while len(optim_prompts) < self.max_successful_prompt and attack_attempt < self.max_attack_attempts and attack_steps < self.max_attack_steps:
             attack_attempt += 1
             curr_optim_prompts = []
@@ -270,7 +282,6 @@ class GCG:
             logging.info(f"Control string: {control_str}")
             logging.info(f"Question string: {self.question}")
             logging.info(f"Current prompt: {curr_prompt}")
-
             question_embedding = self.model(self.question).detach()
 
             self.model.zero_grad()
@@ -282,7 +293,9 @@ class GCG:
 
             logging.info(f"Initial loss: {initial_loss.item()}")
 
-            success = self.evaluate_matched(initial_loss)
+            success = self.evaluate_matched(loss=initial_loss, 
+                                            question_embedding=question_embedding,
+                                            target_embedding=target_embedding)
             if success:
                 update_toks = 0
                 logging.info("Your bad info is matched!")
@@ -355,12 +368,13 @@ class GCG:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0)
                     target_embeddings = self.model(input_ids=inputs)
                     losses = self.get_loss(question_embedding, target_embeddings)
+                    dot_products = target_embeddings @ question_embedding.T
                     # del inputs ; gc.collect()
                     losses[torch.isnan(losses)] = 999999
                     curr_best_loss, best_idx = torch.min(losses, dim=0)
                     curr_best_control_tokens = candidates[best_idx]
                     del inputs ; gc.collect()
-                logging.info("current best loss: {}".format(curr_best_loss.item()))
+                logging.info(f"current best loss: {curr_best_loss.item()}\tcurrent best similarity: {dot_products[best_idx].item()}")
                 if curr_best_loss < best_loss:
                     update_toks += 1
                     local_optim_counter = 0
@@ -382,22 +396,29 @@ class GCG:
                         tmp_loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
 
                         logging.info("The tmp loss is: {}".format(tmp_loss.data.item()))
-                        success = self.evaluate_matched(tmp_loss)
+                        success = self.evaluate_matched(loss=tmp_loss,
+                                                        question_embedding=question_embedding,
+                                                        target_embedding=target_embedding)
                         if success:
                             current_control_str = self.tokenizer.decode(tmp_input[control_slice.start: control_slice.stop])
                             # if the str start with space, remove the space
                             if current_control_str[0] == ' ':
                                 current_control_str = current_control_str[1: ]
                             if self.no_space:
-                                urrent_control_str = target + current_control_str
+                                store_control_str = current_control_str
+                                current_control_str = target + current_control_str
                             else:
+                                store_control_str = current_control_str
                                 current_control_str = target + ' ' + current_control_str
+                                
                             
                             logging.info("Current control string: {}".format(current_control_str))
                             embedding = self.model([current_control_str])
                             cosine_similarity = F.cosine_similarity(question_embedding, embedding)
                             loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
-                            success = self.evaluate_matched(loss)
+                            success = self.evaluate_matched(loss=loss,
+                                                            question_embedding=question_embedding,
+                                                            target_embedding=target_embedding)
                             if success:
                                 update_toks = 0
                                 logging.info("Attack success, append the current trigger to optim_prompts")
@@ -408,7 +429,8 @@ class GCG:
                                     end_iter = True
                                     
                                 if len(optim_prompts) + len(curr_optim_prompts) >= self.max_successful_prompt:
-                                    end_iter = True                
+                                    end_iter = True
+                                
                 else:
                     if isinstance(best_loss, int):
                         logging.info("After {} iterations, the best loss is still int".format(i, best_loss))
@@ -436,4 +458,4 @@ class GCG:
         end_time = time.time()
         logging.info("Total time: {}".format(end_time - curr_time))
         
-        return optim_prompts, optim_steps
+        return optim_prompts, optim_steps, store_control_str

@@ -24,7 +24,7 @@ def get_pooling_results(token_embeddings, attention_mask, pooling_mode='mean'):
 # Custom similarity model
 class SentenceEmbeddingModel(nn.Module):
     def __init__(self, model_path):
-        # model_path = "MPNetModel"
+        self.model_path = model_path
         super(SentenceEmbeddingModel, self).__init__()
         if "MPNetModel" in model_path:
             self.model = MPNetModel.from_pretrained(model_path)
