@@ -1,6 +1,10 @@
 *.out
 *.log
 *.txt
+*.json
+*.jsonl
+*.tsv
+*.csv
 *__pycache__/
 get_base_token
 XLLM-161C
