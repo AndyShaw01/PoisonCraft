@@ -104,7 +104,7 @@ class GCG:
         self.max_attack_steps = args.max_attack_steps
         self.loss_threshold = args.loss_threshold if hasattr(args, 'loss_threshold') else 0.5
         self.early_stop_iterations = args.early_stop_iterations if hasattr(args, 'early_stop_iterations') else 200
-        self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 50
+        self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 150
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
         self.no_space = False
         # self.random = args.random
@@ -236,7 +236,7 @@ class GCG:
     def evaluate_matched(self, loss=None, question_embedding=None, target_embedding=None, mode="product"):
         if mode == "product":
             product = question_embedding @ target_embedding.T
-            logging.info(f"dot product_similarity:\t{product}")
+            logging.info(f"dot product_similarity:\t{product.item()}")
             if product > self.product_threshold:
                 return True
             else:
@@ -346,26 +346,26 @@ class GCG:
                 topk = 64
                 filter_cand=True
                 with torch.no_grad():
-                    control_cand = self.sample_control(averaged_grad, control_tokens, batch_size, topk)
+                    control_cand = self.sample_control(averaged_grad, control_tokens, batch_size, topk) # 128, 20
                     if filter_cand:
-                        candidates.append(self.get_filtered_cands(control_cand, self.tokenizer, control_tokens))
+                        candidates.append(self.get_filtered_cands(control_cand, self.tokenizer, control_tokens)) # [[]]
                     else:
                         candidates.append(control_cand)
                 del averaged_grad, control_cand ; gc.collect()
                 curr_best_loss = 999999
                 curr_best_control_tokens = None
 
-                candidates = candidates[0]
+                candidates = candidates[0] # [[]]->[]
 
                 with torch.no_grad():
                     inputs = torch.tensor([], device=self.device)
-                    for cand in candidates:
+                    for cand in candidates: # cand-len: 20
                         tmp_input = input_ids.clone()
                         tmp_input[control_slice] = cand
                         if inputs.shape[0] == 0:
-                            inputs = tmp_input.unsqueeze(0)
+                            inputs = tmp_input.unsqueeze(0) # [1, len]
                         else:
-                            inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0)
+                            inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0) # [N, len]
                     target_embeddings = self.model(input_ids=inputs)
                     losses = self.get_loss(question_embedding, target_embeddings)
                     dot_products = target_embeddings @ question_embedding.T
@@ -379,19 +379,19 @@ class GCG:
                     update_toks += 1
                     local_optim_counter = 0
                     best_loss = curr_best_loss
-                    control_tokens = deepcopy(curr_best_control_tokens)
+                    control_tokens = deepcopy(curr_best_control_tokens) # in the next iteration, we will use the best control tokens to update the input_ids
                     logging.info("Step: {}, Loss: {}".format(i, best_loss.data.item()))
 
                     # test the can we matched the bad info, using the best control tokens 
                     tmp_input = input_ids.clone()
-                    tmp_input[control_slice] = curr_best_control_tokens
+                    tmp_input[control_slice] = curr_best_control_tokens # the best control tokens in this iteration. so the tmp_input is the best input_ids
                     # tmp_input = tmp_input[:target_slice.start]
 
                     num_input_tokens = len(tmp_input)
 
                     # The final test for the attack adv parts
                     if curr_best_loss < self.loss_threshold and update_toks >= self.update_token_threshold:
-                        target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
+                        target_embedding = self.model(input_ids=tmp_input.unsqueeze(0))
                         cosine_similarity = F.cosine_similarity(question_embedding, target_embedding)
                         tmp_loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
 
@@ -435,7 +435,7 @@ class GCG:
                     if isinstance(best_loss, int):
                         logging.info("After {} iterations, the best loss is still int".format(i, best_loss))
                     else:
-                        logging.info("After {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
+                        logging.info("After {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].item(), self.product_threshold))
                     local_optim_counter += 1
 
                 del candidates, tmp_input, losses ; gc.collect()
@@ -445,9 +445,9 @@ class GCG:
                 # logging.info("Time for this step: {}".format(step_end_time - step_time))
             
             if isinstance(best_loss, int):
-                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss))
+                logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss, dot_products[best_idx].item(), self.product_threshold))
             else:
-                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
+                logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].item(), self.product_threshold))
             logging.info('In {} attemp, number of optim prompts is: {}'.format(attack_attempt, len(curr_optim_prompts)))
 
             optim_prompts.extend(curr_optim_prompts)
