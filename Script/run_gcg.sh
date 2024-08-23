@@ -44,6 +44,6 @@ else
     elif [ "$MODEL" = "MPNetModel" ]; then
         python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_mp.log" 2>&1
     elif [ "$MODEL" = "contriever" ]; then
-        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE> "$LOG_PATH/gcg_all_pl.log" 2>&1
+        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE> "$LOG_PATH/gcg_all_top100_2.log" 2>&1
     fi
 fi
