@@ -13,7 +13,7 @@ def gcg_attack(args):
 
     args.question = question   
     print("The question sentence is: ", question)
-
+    args.product_threshold = 0.87
     gcg = GCG(args)
     target_sentence = pd.read_csv('./Dataset/infovector.csv')['text'].tolist()[args.index]
     optim_prompts, steps, _ = gcg.run(target_sentence)
