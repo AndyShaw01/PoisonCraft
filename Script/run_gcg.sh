@@ -10,6 +10,7 @@ MODE="all"
 ADD_EOS=False
 RUN_INDEX=1
 INDEX=0
+TOPK=90
 
 if [ "$MODEL" = "t5-base" ]; then
     LOSS_THRESHOLD=0.015

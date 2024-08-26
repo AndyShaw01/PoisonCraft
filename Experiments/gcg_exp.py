@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_queries_path", type=str, default='./Dataset/nq/train_queries_test.jsonl')
     parser.add_argument("--test_queries_path", type=str, default='./Dataset/nq/test_queries.jsonl')
     parser.add_argument("--info_vector_path", type=str, default='./Dataset/nq/corpus.jsonl')
-    parser.add_argument("--ground_truth_path", type=str, default='./Dataset/nq/ground_truth_bar.csv')
+    parser.add_argument("--topk", type=int, default=99, help="topk")
     parser.add_argument("--save_path", type=str, default='./Results/')
 
     args = parser.parse_args()

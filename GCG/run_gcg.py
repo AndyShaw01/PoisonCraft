@@ -33,7 +33,7 @@ def gcg_attack_all(args):
             queries_text.append(data['text'])
     
     # Read ground truth file
-    ground_truth = pd.read_csv(args.ground_truth_path)
+    ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.topk}.csv')
     
     gcg = GCG(args)
     # For loop queries_id, ground_truth_values
@@ -48,10 +48,10 @@ def gcg_attack_all(args):
         optim_prompts_list.append(optim_prompts)
     
     # Save suffix_list to csv
-    with open(f'{args.save_path}/init/suffix.csv', 'w') as f:
+    with open(f'{args.save_path}/init/suffix_{args.topk}.csv', 'w') as f:
         writer = csv.writer(f)
         writer.writerows(suffix_list)
 
-    with open(f'{args.save_path}/init/optim_prompts_list', 'w') as f:
+    with open(f'{args.save_path}/init/optim_prompts_list_{args.topk}', 'w') as f:
         writer = csv.writer(f)
         writer.writerow(optim_prompts_list)

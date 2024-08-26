@@ -15,16 +15,17 @@ def main(args):
     label = torch.ones(test_embedding.shape, device=test_embedding.device)
     # similarity = F.cosine_similarity(test_embedding, info_embedding)
     similarity = test_embedding @ info_embedding.T
-
-    print("Similarity: ", round(similarity.item(), 9), "\tloss", round(F.mse_loss(similarity, label).item(), 9))
+    print("Question:", args.test_sentence)
+    print("Document:", args.doc_info)
+    print("Similarity: ", round(similarity.item(), 4), "\tloss", round(F.mse_loss(similarity, label).item(), 4))
 
 
 if __name__ == "__main__":
     # Load Data
     parser = argparse.ArgumentParser(description='Test contriever model')
     parser.add_argument("--model_path", type=str, default="/data1/shaoyangguang/offline_model/contriever")
-    parser.add_argument("--test_sentence", type=str, default="who played the middle sister on full house") # test841
-    parser.add_argument("--doc_info", type=str, default="In 2012, eight of the Full House cast members reunited in Los Angeles for their 25th anniversary. Publicists for Mary-Kate and Ashley Olsen said that they \"weren't able to attend, given their work schedules.\"[20]")
+    parser.add_argument("--test_sentence", type=str, default="what is the population of keystone heights florida") # test841
+    parser.add_argument("--doc_info", type=str, default="According to the United States Census Bureau, the city has a total area of 1.1 square miles (2.9\u00a0km2), of which 0.012 square miles (0.03\u00a0km2), or 1.16%, is water.[5]")
 
     args = parser.parse_args()
 
