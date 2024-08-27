@@ -2,9 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer
+from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel
 from sentence_transformers.models import Pooling
-from .contriever_src.contriever import Contriever
 
 import pdb
 
@@ -34,7 +33,7 @@ class SentenceEmbeddingModel(nn.Module):
             self.model = T5EncoderModel.from_pretrained(model_path)
             self.tokenizer = T5Tokenizer.from_pretrained(model_path, legacy=False)
         elif "contriever" in model_path:
-            self.model = Contriever.from_pretrained(model_path)
+            self.model = AutoModel.from_pretrained(model_path)
             self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         else:
             ValueError("Model not supported")
@@ -51,15 +50,9 @@ class SentenceEmbeddingModel(nn.Module):
         else:                
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
-        
-        if "contriever" in self.model_path:
-            last_hidden = model_output["last_hidden_state"]
-            last_hidden = last_hidden.masked_fill(~encoded_input['attention_mask'][..., None].bool(), 0.0)
-            emb = last_hidden.sum(dim=1) / encoded_input['attention_mask'].sum(dim=1)[..., None]
-            sentence_embeddings = torch.nn.functional.normalize(emb, dim=-1)
-        else:
-            sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])
-            sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
+
+        sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])
+        # sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
         
         return sentence_embeddings
     def zeio_grad(self):
