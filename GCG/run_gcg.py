@@ -31,7 +31,7 @@ def gcg_attack_all(args):
             queries_id.append(data['_id'])
             queries_text.append(data['text'])
     
-    # ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.topk}.csv')
+    ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.topk}.csv')
 
     args.save_path = f"./Results/pre_exp/results_top_{args.topk}.csv"
     print("The save path is: ", args.save_path)
@@ -42,6 +42,5 @@ def gcg_attack_all(args):
     for i in range(len(queries_id)):
         args.index = i
         gcg.question = queries_text[i]
-        # gcg.product_threshold = ground_truth[ground_truth['test_name'] == queries_id[i]].values[0][1]
-        gcg.product_threshold = 0.6
+        gcg.product_threshold = ground_truth[ground_truth['test_name'] == queries_id[i]].values[0][1]
         gcg.run(args.target)
