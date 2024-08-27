@@ -37,7 +37,6 @@ def gcg_attack_all(args):
     print("The save path is: ", args.save_path)
     if not os.path.exists(os.path.dirname(args.save_path)):
         os.makedirs(os.path.dirname(args.save_path))
-    pdb.set_trace()
     gcg = GCG(args)
 
     for i in range(len(queries_id)):
