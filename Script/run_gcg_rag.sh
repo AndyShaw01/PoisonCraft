@@ -43,26 +43,20 @@ for TOPK in $(echo $TOPK_LIST | sed "s/,/ /g")
 do
     python -u "$PYTHON_PRE_SCRIPT" --k $TOPK > "$LOG_PATH_PRE/get_ground_truth_${TOPK}.log" 2>&1
     if [ "$RUN_MODE" = "Test" ]; then
-        python -u "$PYTHON_EXP_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE
+        python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE
     else
         if [ "$MODEL" = "t5-base" ]; then
-            python -u "$PYTHON_EXP_SCRIPT" --index $INDEX \
-                --model_path $MODEL_PATH $ADD_EOS_FLAG \
-                --run_index $RUN_INDEX \
+            python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
                 --loss_threshold $LOSS_THRESHOLD \
                 --attack_mode $MODE \
                 --topk $TOPK > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
         elif [ "$MODEL" = "MPNetModel" ]; then
-            python -u "$PYTHON_EXP_SCRIPT" --index $INDEX \
-                --model_path $MODEL_PATH $ADD_EOS_FLAG \
-                --run_index $RUN_INDEX \
+            python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
                 --loss_threshold $LOSS_THRESHOLD \
                 --attack_mode $MODE \
                 --topk $TOPK > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
         elif [ "$MODEL" = "contriever" ]; then
-            python -u "$PYTHON_EXP_SCRIPT" --index $INDEX \
-                --model_path $MODEL_PATH $ADD_EOS_FLAG \
-                --run_index $RUN_INDEX \
+            python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
                 --loss_threshold $LOSS_THRESHOLD \
                 --attack_mode $MODE \
                 --topk $TOPK > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1

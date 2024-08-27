@@ -4,12 +4,10 @@
 # MODEL="MPNetModel"
 MODEL="contriever"
 PYTHON_SCRIPT="Experiments/gcg_exp.py"
-RUN_MODE="Run" #Test
+RUN_MODE="Test" #Test
 MODE="all"
 
 ADD_EOS=False
-RUN_INDEX=1
-INDEX=0
 TOPK=90
 
 if [ "$MODEL" = "t5-base" ]; then
@@ -19,14 +17,14 @@ elif [ "$MODEL" = "MPNetModel" ]; then
     LOSS_THRESHOLD=0.025
     MODEL_PATH="/data1/shaoyangguang/offline_model/MPNetModel"
 elif [ "$MODEL" = "contriever" ]; then
-    LOSS_THRESHOLD=0.02
+    LOSS_THRESHOLD=0.1
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
 fi
 
 if [ "$ADD_EOS" = "True" ]; then
-    LOG_PATH="Logs/${MODEL}/GCG_${RUN_INDEX}"
+    LOG_PATH="Logs/${MODEL}/GCG_EOS"
 else
-    LOG_PATH="Logs/${MODEL}/GCG-${RUN_INDEX}"
+    LOG_PATH="Logs/${MODEL}/GCG"
 fi
 
 mkdir -p "$LOG_PATH"
@@ -38,13 +36,13 @@ if [ "$ADD_EOS" = "True" ]; then
 fi
 
 if [ "$RUN_MODE" = "Test" ]; then
-    python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE
+    python -u "$PYTHON_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE
 else
     if [ "$MODEL" = "t5-base" ]; then
-        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_t5.log" 2>&1
+        python -u "$PYTHON_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_t5.log" 2>&1
     elif [ "$MODEL" = "MPNetModel" ]; then
-        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_mp.log" 2>&1
+        python -u "$PYTHON_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_mp.log" 2>&1
     elif [ "$MODEL" = "contriever" ]; then
-        python -u "$PYTHON_SCRIPT" --index $INDEX --model_path $MODEL_PATH $ADD_EOS_FLAG --run_index $RUN_INDEX --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE> "$LOG_PATH/gcg_all_top100_2.log" 2>&1
+        python -u "$PYTHON_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE> "$LOG_PATH/gcg_all_top100_2.log" 2>&1
     fi
 fi
