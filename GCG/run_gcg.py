@@ -13,7 +13,7 @@ def gcg_attack(args):
 
     args.question = question   
     print("The question sentence is: ", question)
-    args.product_threshold = 0.87
+    args.product_threshold = 0.8
     gcg = GCG(args)
     target_sentence = pd.read_csv('./Dataset/infovector.csv')['text'].tolist()[args.index]
     optim_prompts, steps, _ = gcg.run(target_sentence)
@@ -23,7 +23,6 @@ def gcg_attack(args):
 
 def gcg_attack_all(args):
 
-    # Read the question sentence from jsonl file to queries
     with open(args.train_queries_path, 'r') as f:
         queries_id = []
         queries_text = []
@@ -32,26 +31,18 @@ def gcg_attack_all(args):
             queries_id.append(data['_id'])
             queries_text.append(data['text'])
     
-    # Read ground truth file
-    ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.topk}.csv')
-    
+    # ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.topk}.csv')
+
+    args.save_path = f"./Results/pre_exp/results_top_{args.topk}.csv"
+    print("The save path is: ", args.save_path)
+    if not os.path.exists(os.path.dirname(args.save_path)):
+        os.makedirs(os.path.dirname(args.save_path))
+    pdb.set_trace()
     gcg = GCG(args)
-    # For loop queries_id, ground_truth_values
-    suffix_list = []
-    optim_prompts_list = []
+
     for i in range(len(queries_id)):
         args.index = i
         gcg.question = queries_text[i]
-        gcg.product_threshold = ground_truth[ground_truth['test_name'] == queries_id[i]].values[0][1]
-        optim_prompts, steps, suffix = gcg.run(args.target)
-        suffix_list.append(suffix)
-        optim_prompts_list.append(optim_prompts)
-    
-    # Save suffix_list to csv
-    with open(f'{args.save_path}/init/suffix_{args.topk}.csv', 'w') as f:
-        writer = csv.writer(f)
-        writer.writerows(suffix_list)
-
-    with open(f'{args.save_path}/init/optim_prompts_list_{args.topk}', 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(optim_prompts_list)
+        # gcg.product_threshold = ground_truth[ground_truth['test_name'] == queries_id[i]].values[0][1]
+        gcg.product_threshold = 0.6
+        gcg.run(args.target)
