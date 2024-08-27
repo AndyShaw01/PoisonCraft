@@ -8,7 +8,7 @@ RUN_MODE="Test" #Test
 MODE="all"
 
 ADD_EOS=False
-TOPK=90
+TOPK=1
 
 if [ "$MODEL" = "t5-base" ]; then
     LOSS_THRESHOLD=0.015
