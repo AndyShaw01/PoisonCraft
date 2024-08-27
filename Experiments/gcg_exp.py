@@ -19,7 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_attack_steps", type=int, default=1000)     # 
     parser.add_argument("--early_stop", type=bool, default=True)          # 
     parser.add_argument("--max_steps", type=int, default=500)             # 
-    parser.add_argument("--max_attack_attempts", type=int, default=5)    # rerun, try, if >20, 30 -> rerun
+    parser.add_argument("--max_attack_attempts", type=int, default=5)     # rerun, try, if >20, 30 -> rerun
     parser.add_argument("--max_prompts_in_single_attack", type=int, default=1) 
     parser.add_argument("--max_successful_prompt", type=int, default=1)  
     parser.add_argument("--add_eos", action='store_true')
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_queries_path", type=str, default='./Dataset/nq/test_queries.jsonl')
     parser.add_argument("--info_vector_path", type=str, default='./Dataset/nq/corpus.jsonl')
     parser.add_argument("--topk", type=int, default=99, help="topk")
-    parser.add_argument("--save_path", type=str, default='./Results/')
+    parser.add_argument("--save_path", type=str)
 
     args = parser.parse_args()
     
