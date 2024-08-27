@@ -6,7 +6,7 @@ import transformers
 from transformers import BertModel, XLMRobertaModel
 
 from . import utils
-
+import pdb
 
 class Contriever(BertModel):
     def __init__(self, config, pooling="average", **kwargs):
@@ -41,7 +41,6 @@ class Contriever(BertModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
         )
-
         last_hidden = model_output["last_hidden_state"]
         last_hidden = last_hidden.masked_fill(~attention_mask[..., None].bool(), 0.0)
 
