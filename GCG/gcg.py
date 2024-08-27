@@ -107,13 +107,16 @@ class GCG:
         self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 150
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
         self.no_space = False
-        # self.random = args.random
         self.setup()
         self.product_threshold = args.product_threshold
-        # self.test_prefixes = get_black_list()
-        # self.gcg_prompt = get_templates(args.model_path, 'GCG')
-        # self.chat_prompt = get_templates(args.model_path, 'chat')
-        # self.end_tokens = get_end_tokens(args.model_path)
+        self.result_file = args.save_path
+        if self.result_file is None:
+            self.result_file = f'results-{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}.csv'
+        self.raw_fp = open(self.result_file, 'w', buffering=1)
+        self.writter = csv.writer(self.raw_fp)
+        self.writter.writerow(
+            ['index', 'question','control_suffix', 'similarity', 'similarity_threshold', 'loss', 'attack_steps', 'attack_attempt'])
+        
 
     def setup(self):
         logging.basicConfig(
@@ -434,6 +437,7 @@ class GCG:
                 else:
                     if isinstance(best_loss, int):
                         logging.info("After {} iterations, the best loss is still int".format(i, best_loss))
+                        loss = best_loss
                     else:
                         logging.info("After {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].item(), self.product_threshold))
                     local_optim_counter += 1
@@ -457,5 +461,6 @@ class GCG:
         
         end_time = time.time()
         logging.info("Total time: {}".format(end_time - curr_time))
-        
-        return optim_prompts, optim_steps, store_control_str
+
+        self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].item(), self.product_threshold, best_loss.data.item(), optim_steps[-1], attack_attempt])
+        # ['index', 'question','control_suffix', 'similarity', 'similarity_threshold', 'loss', 'attack_steps', 'attack_attempt'])
