@@ -44,24 +44,19 @@ class SentenceEmbeddingModel(nn.Module):
         if inputs_embeds is not None:  # Calculate embeddings from sentences directly
             # Tokenize sentences if input embeddings are not provided
             encoded_input = {'attention_mask': (inputs_embeds != 0).any(dim=-1).long()}
-            if "contriever" in self.model_path:
-                model_output = self.model(inputs_embeds=inputs_embeds, attention_mask=encoded_input['attention_mask'])
-            else:
-                model_output = self.model(inputs_embeds=inputs_embeds)
-            
+            model_output = self.model(inputs_embeds=inputs_embeds)
         elif input_ids is not None:  # Calculate embeddings from input ids
             encoded_input = {'attention_mask': input_ids != 0}
-            if "contriever" in self.model_path:
-                model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
-            else:
-                model_output = self.model(inputs_embeds=inputs_embeds)
+            model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
         else:                
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
         
-        # Get sentence embeddings from different model
         if "contriever" in self.model_path:
-            sentence_embeddings = model_output
+            last_hidden = model_output["last_hidden_state"]
+            last_hidden = last_hidden.masked_fill(~encoded_input['attention_mask'][..., None].bool(), 0.0)
+            emb = last_hidden.sum(dim=1) / encoded_input['attention_mask'].sum(dim=1)[..., None]
+            sentence_embeddings = torch.nn.functional.normalize(emb, dim=-1)
         else:
             sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])
             sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
