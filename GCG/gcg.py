@@ -270,7 +270,6 @@ class GCG:
             control_tokens = []
             while len(control_tokens) != self.control_string_len:
                 # when random is true, sometimes the control token will not be tokenized as expected length
-                # so we need to check the length of the control token
                 curr_prompt = target
                 toks = self.tokenizer(curr_prompt).input_ids
                 target_slice = slice(1, len(toks)-1)
@@ -288,6 +287,7 @@ class GCG:
             question_embedding = self.model(self.question).detach()
 
             self.model.zero_grad()
+
             input_ids = torch.tensor(toks, device=self.device)
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
             
