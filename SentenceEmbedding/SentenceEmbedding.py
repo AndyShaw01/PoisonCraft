@@ -53,7 +53,7 @@ class SentenceEmbeddingModel(nn.Module):
 
         sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])
         # Normalize embeddings
-        sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
+        # sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
         
         return sentence_embeddings
     def zeio_grad(self):
