@@ -8,6 +8,7 @@ MODE="all"
 
 ADD_EOS=False
 TOPK_LIST=1,5,10
+CONTROL_LENGTH=15
 
 if [ "$MODEL" = "t5-base" ]; then
     LOSS_THRESHOLD=0.015
@@ -16,7 +17,7 @@ elif [ "$MODEL" = "MPNetModel" ]; then
     LOSS_THRESHOLD=0.025
     MODEL_PATH="/data1/shaoyangguang/offline_model/MPNetModel"
 elif [ "$MODEL" = "contriever" ]; then
-    LOSS_THRESHOLD=0.1
+    LOSS_THRESHOLD=0.15
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
 fi
 
@@ -41,22 +42,30 @@ for TOPK in $(echo $TOPK_LIST | sed "s/,/ /g")
 do
     python -u "$PYTHON_PRE_SCRIPT" --k $TOPK > "$LOG_PATH_PRE/get_ground_truth_${TOPK}.log" 2>&1
     if [ "$RUN_MODE" = "Test" ]; then
-        python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE
+        python -u "$PYTHON_EXP_SCRIPT" \
+            --model_path $MODEL_PATH $ADD_EOS_FLAG  \
+            --loss_threshold $LOSS_THRESHOLD \
+            --attack_mode $MODE \
+            --topk $TOPK \
+            --control_string_length $CONTROL_LENGTH 
     else
         if [ "$MODEL" = "t5-base" ]; then
             python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
                 --loss_threshold $LOSS_THRESHOLD \
                 --attack_mode $MODE \
+                --control_string_length $CONTROL_LENGTH \
                 --topk $TOPK > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
         elif [ "$MODEL" = "MPNetModel" ]; then
             python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
                 --loss_threshold $LOSS_THRESHOLD \
                 --attack_mode $MODE \
+                --control_string_length $CONTROL_LENGTH \
                 --topk $TOPK > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
         elif [ "$MODEL" = "contriever" ]; then
             python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
                 --loss_threshold $LOSS_THRESHOLD \
                 --attack_mode $MODE \
+                --control_string_length $CONTROL_LENGTH \
                 --topk $TOPK > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
         fi
     fi

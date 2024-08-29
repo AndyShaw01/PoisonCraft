@@ -9,6 +9,7 @@ MODE="all"
 
 ADD_EOS=False
 TOPK=1
+CONTROL_LENGTH=10
 
 if [ "$MODEL" = "t5-base" ]; then
     LOSS_THRESHOLD=0.015
@@ -17,7 +18,7 @@ elif [ "$MODEL" = "MPNetModel" ]; then
     LOSS_THRESHOLD=0.025
     MODEL_PATH="/data1/shaoyangguang/offline_model/MPNetModel"
 elif [ "$MODEL" = "contriever" ]; then
-    LOSS_THRESHOLD=0.1
+    LOSS_THRESHOLD=0.15
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
 fi
 
@@ -36,7 +37,7 @@ if [ "$ADD_EOS" = "True" ]; then
 fi
 
 if [ "$RUN_MODE" = "Test" ]; then
-    python -u "$PYTHON_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE
+    python -u "$PYTHON_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE --control_string_length $CONTROL_LENGTH
 else
     if [ "$MODEL" = "t5-base" ]; then
         python -u "$PYTHON_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  --loss_threshold $LOSS_THRESHOLD > "$LOG_PATH/gcg_t5.log" 2>&1
