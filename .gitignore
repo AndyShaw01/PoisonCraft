@@ -10,3 +10,4 @@ get_base_token
 XLLM-161C
 PoisonedRAG-main
 TestLLM
+*.tar.gz
