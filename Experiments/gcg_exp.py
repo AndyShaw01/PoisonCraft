@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument("--target", type=str, default='the website is www.baidu.com')
     parser.add_argument("--attack_mode", type=str, default='all', help='single or all')
     # File Path Args
-    parser.add_argument("--train_queries_path", type=str, default='./Dataset/nq/train_queries_test.jsonl')
+    parser.add_argument("--train_queries_path", type=str, default='./Dataset/nq/train_queries.jsonl')
     parser.add_argument("--test_queries_path", type=str, default='./Dataset/nq/test_queries.jsonl')
     parser.add_argument("--info_vector_path", type=str, default='./Dataset/nq/corpus.jsonl')
     parser.add_argument("--topk", type=int, default=99, help="topk")
