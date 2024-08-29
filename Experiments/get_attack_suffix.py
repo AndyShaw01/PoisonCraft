@@ -13,7 +13,6 @@ from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
 
 def main(args):
     df = pd.read_csv(args.candidate_file)
-    pdb.set_trace()
     for i in range(len(df)):
         attack_control_suffix = df['control_suffix'].iloc[i]
         df_queries = pd.read_json(args.queries_file, lines=True)
@@ -29,9 +28,13 @@ def main(args):
         questions_embedding = similarity_model(questions)
 
         similarity = torch.matmul(sentence_embedding, questions_embedding.t())
+        print(similarity)
         # 记录similarity中第二大的值
-        secend_max = torch.topk(similarity[0], 2).values[1]
-        print(f"{i}, {secend_max}")
+        # secend_max = torch.topk(similarity[0], 2).values[1]
+        # 记录similarity中最大的值
+        # max_max = torch.topk(similarity[0], 1).values[0]
+        # # print(f"{i}, {secend_max}")
+        # print(f"{i}, {max_max}")
         # # 判断，如果 similarity中若有大于0.9的值，则此时，记录下来
         # if len(similarity > 0.9)>3:
         #     print("The index is: ", i)
@@ -41,7 +44,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Get attack suffix')
-    parser.add_argument('--candidate_file', type=str, default='./Results/pre_exp/results_top_1_test.csv', help='The candidate file')
+    parser.add_argument('--candidate_file', type=str, default='./Results/pre_exp/results_top_50.csv', help='The candidate file')
     parser.add_argument('--queries_file', type=str, default='./Dataset/nq/train_queries_test.jsonl', help='The queries file')
 
     args = parser.parse_args()
