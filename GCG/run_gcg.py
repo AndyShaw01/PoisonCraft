@@ -32,8 +32,10 @@ def gcg_attack_all(args):
             queries_text.append(data['text'])
     
     ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.topk}.csv')
-
-    args.save_path = f"./Results/pre_exp/results_top_{args.topk}.csv"
+    if args.attack_batch_size > 1:
+        args.save_path = f"./Results/pre_exp/batch/results_top_{args.topk}.csv"
+    else:
+        args.save_path = f"./Results/pre_exp/results_top_{args.topk}.csv"
     print("The save path is: ", args.save_path)
     if not os.path.exists(os.path.dirname(args.save_path)):
         os.makedirs(os.path.dirname(args.save_path))

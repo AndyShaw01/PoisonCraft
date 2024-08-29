@@ -500,8 +500,10 @@ class GCG:
         end_time = time.time()
         logging.info("Total time: {}".format(end_time - curr_time))
         if self.attack_batch_mode == "mean":
-            pdb.set_trace()
-            self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].mean().item(), self.product_threshold.mean().item(), best_loss.data.item(), optim_steps[-1], attack_attempt])
+            try:
+                self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].mean().item(), self.product_threshold.mean().item(), best_loss.data.item(), optim_steps[-1], attack_attempt])
+            except:
+                self.writter.writerow([self.args.index, self.question, store_control_str, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
         else:
             self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].tolist(), self.product_threshold, best_loss.data.item(), optim_steps[-1], attack_attempt])
         # ['index', 'question','control_suffix', 'similarity', 'similarity_threshold', 'loss', 'attack_steps', 'attack_attempt'])

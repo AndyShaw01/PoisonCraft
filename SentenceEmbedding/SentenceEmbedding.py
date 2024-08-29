@@ -48,7 +48,7 @@ class SentenceEmbeddingModel(nn.Module):
             encoded_input = {'attention_mask': input_ids != 0}
             model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
         else:                
-            encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
+            encoded_input = self.tokenizer(sentences, padding=True, truncation=True, max_length=1024, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
 
         sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])

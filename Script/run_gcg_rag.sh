@@ -7,7 +7,7 @@ RUN_MODE="Run" #Test
 MODE="all"
 
 ADD_EOS=False
-TOPK_LIST=50
+TOPK_LIST=10,20,50
 CONTROL_LENGTH=40
 
 if [ "$MODEL" = "t5-base" ]; then
@@ -24,7 +24,7 @@ fi
 if [ "$ADD_EOS" = "True" ]; then
     LOG_PATH="Logs/${MODEL}/GCG-EOS"
 else
-    LOG_PATH="Logs/${MODEL}/GCG"
+    LOG_PATH="Logs/${MODEL}/GCG-Batch"
 fi
 
 LOG_PATH_PRE="Logs/tmp_data/"
