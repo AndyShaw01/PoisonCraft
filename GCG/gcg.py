@@ -107,6 +107,8 @@ class GCG:
         self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 150
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
         self.no_space = False
+        self.attack_batch_size = args.attack_batch_size
+        self.attack_batch_mode = args.attack_batch_mode
         self.setup()
         self.product_threshold = args.product_threshold
         self.result_file = args.save_path
@@ -139,7 +141,7 @@ class GCG:
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
         return cand_str, cand_toks
 
-    def get_loss(self, question_embedding, target_embeddings, mode='mse',reduction='none'):
+    def get_loss(self, question_embedding, target_embeddings, mode='mse',reduction='none', dim=1):
         """
         get the loss between the question embedding and the target embeddings
 
@@ -155,7 +157,7 @@ class GCG:
         torch.tensor
             The loss between the question embedding and the target embeddings
         """
-        cosine_similarity = F.cosine_similarity(target_embeddings, question_embedding)
+        cosine_similarity = F.cosine_similarity(question_embedding, target_embeddings, dim=dim) if dim == 1 else F.cosine_similarity(question_embedding, target_embeddings, dim=dim).mean(dim=0)
         label = torch.ones_like(cosine_similarity, device=self.model.device)
         if mode == 'mse':
             loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
@@ -237,20 +239,37 @@ class GCG:
         return new_control_toks
     
     def evaluate_matched(self, loss=None, question_embedding=None, target_embedding=None, mode="product"):
-        if mode == "product":
-            product = question_embedding @ target_embedding.T
-            logging.info(f"dot product_similarity:\t{product.item()}")
-            if product > self.product_threshold:
-                return True
-            else:
-                return False
-        elif mode == "loss":
-            product = question_embedding @ target_embedding.T
-            logging.info(f"dot product_similarity:\t{product}")
-            if loss < self.loss_threshold:
-                return True
-            else:
-                return False
+        if self.attack_batch_size > 1:
+            if mode == "product":
+                product = question_embedding @ target_embedding.T
+                logging.info(f"dot product_similarity:\t{product.mean().item()}")
+                if self.attack_batch_mode == "mean":
+                    product = product.mean()
+                    product_threshold = torch.tensor(self.product_threshold, device=self.model.device).mean()
+                    if product > product_threshold:
+                        return True
+                    else:
+                        return False    
+                else:                    
+                    product_threshold = torch.tensor(self.product_threshold, device=self.model.device).unsqueeze(0).view(-1, 1)
+                    # Perform element-wise comparison
+                    all_greater = torch.all(product > product_threshold).item()
+                    return bool(all_greater)
+        else:
+            if mode == "product":
+                product = question_embedding @ target_embedding.T
+                logging.info(f"dot product_similarity:\t{product.item()}")
+                if product > self.product_threshold:
+                    return True
+                else:
+                    return False
+            elif mode == "loss":
+                product = question_embedding @ target_embedding.T
+                logging.info(f"dot product_similarity:\t{product}")
+                if loss < self.loss_threshold:
+                    return True
+                else:
+                    return False
 
     def run(self, target):
         self._nonascii_toks, self._ascii_toks = get_nonascii_toks(self.args.model_path, self.tokenizer)
@@ -292,7 +311,10 @@ class GCG:
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
             
             # ========== setup initial loss========== # 
-            initial_loss = self.get_loss(question_embedding, target_embedding)
+            if self.attack_batch_size > 1:
+                initial_loss = self.get_loss(question_embedding, target_embedding).mean()
+            else:
+                initial_loss = self.get_loss(question_embedding, target_embedding)
 
             logging.info(f"Initial loss: {initial_loss.item()}")
 
@@ -370,14 +392,21 @@ class GCG:
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0) # [N, len]
                     target_embeddings = self.model(input_ids=inputs)
-                    losses = self.get_loss(question_embedding, target_embeddings)
+                    if self.attack_batch_size > 1:
+                        # losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), reduction='mean', dim=2)
+                        losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), dim=2)
+                    else:
+                        losses = self.get_loss(question_embedding, target_embeddings)
                     dot_products = target_embeddings @ question_embedding.T
                     # del inputs ; gc.collect()
                     losses[torch.isnan(losses)] = 999999
                     curr_best_loss, best_idx = torch.min(losses, dim=0)
                     curr_best_control_tokens = candidates[best_idx]
                     del inputs ; gc.collect()
-                logging.info(f"current best loss: {curr_best_loss.item()}\tcurrent best similarity: {dot_products[best_idx].item()}")
+                if self.attack_batch_mode == "mean":
+                    logging.info(f"current best loss: {curr_best_loss.item()}\tcurrent best similarity: {dot_products[best_idx].mean().item()}")
+                else:
+                    logging.info(f"current best loss: {curr_best_loss.item()}\tcurrent best similarity: {dot_products[best_idx].tolist()}")
                 if curr_best_loss < best_loss:
                     update_toks += 1
                     local_optim_counter = 0
@@ -439,7 +468,10 @@ class GCG:
                         logging.info("After {} iterations, the best loss is still int".format(i, best_loss))
                         loss = best_loss
                     else:
-                        logging.info("After {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].item(), self.product_threshold))
+                        if self.attack_batch_mode == "mean":
+                            logging.info("After {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].mean().item(), self.product_threshold.mean().item()))
+                        else:
+                            logging.info("After {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].tolist(), self.product_threshold))
                     local_optim_counter += 1
 
                 del candidates, tmp_input, losses ; gc.collect()
@@ -449,9 +481,15 @@ class GCG:
                 # logging.info("Time for this step: {}".format(step_end_time - step_time))
             
             if isinstance(best_loss, int):
-                logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss, dot_products[best_idx].item(), self.product_threshold))
+                if self.attack_batch_mode == "mean":
+                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss, dot_products[best_idx].mean().item(), self.product_threshold.mean().item()))    
+                else:
+                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss, dot_products[best_idx].tolist(), self.product_threshold))
             else:
-                logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].item(), self.product_threshold))
+                if self.attack_batch_mode == "mean":
+                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].mean().item(), self.product_threshold.mean().item()))
+                else:
+                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].tolist(), self.product_threshold))
             logging.info('In {} attemp, number of optim prompts is: {}'.format(attack_attempt, len(curr_optim_prompts)))
 
             optim_prompts.extend(curr_optim_prompts)
@@ -461,6 +499,9 @@ class GCG:
         
         end_time = time.time()
         logging.info("Total time: {}".format(end_time - curr_time))
-
-        self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].item(), self.product_threshold, best_loss.data.item(), optim_steps[-1], attack_attempt])
+        if self.attack_batch_mode == "mean":
+            pdb.set_trace()
+            self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].mean().item(), self.product_threshold.mean().item(), best_loss.data.item(), optim_steps[-1], attack_attempt])
+        else:
+            self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].tolist(), self.product_threshold, best_loss.data.item(), optim_steps[-1], attack_attempt])
         # ['index', 'question','control_suffix', 'similarity', 'similarity_threshold', 'loss', 'attack_steps', 'attack_attempt'])

@@ -30,6 +30,8 @@ if __name__ == "__main__":
     parser.add_argument("--product_threshold", type=int, default=1)
     parser.add_argument("--target", type=str, default='the website is www.baidu.com')
     parser.add_argument("--attack_mode", type=str, default='all', help='single or all')
+    parser.add_argument("--attack_batch_size", type=int, default=4)
+    parser.add_argument("--attack_batch_mode", type=str, default="mean")
     # File Path Args
     parser.add_argument("--train_queries_path", type=str, default='./Dataset/nq/train_queries.jsonl')
     parser.add_argument("--test_queries_path", type=str, default='./Dataset/nq/test_queries.jsonl')

@@ -7,8 +7,8 @@ RUN_MODE="Run" #Test
 MODE="all"
 
 ADD_EOS=False
-TOPK_LIST=1,5,10
-CONTROL_LENGTH=15
+TOPK_LIST=50
+CONTROL_LENGTH=40
 
 if [ "$MODEL" = "t5-base" ]; then
     LOSS_THRESHOLD=0.015
@@ -17,7 +17,7 @@ elif [ "$MODEL" = "MPNetModel" ]; then
     LOSS_THRESHOLD=0.025
     MODEL_PATH="/data1/shaoyangguang/offline_model/MPNetModel"
 elif [ "$MODEL" = "contriever" ]; then
-    LOSS_THRESHOLD=0.15
+    LOSS_THRESHOLD=0.4
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
 fi
 

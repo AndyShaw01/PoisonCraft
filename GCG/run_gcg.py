@@ -38,9 +38,12 @@ def gcg_attack_all(args):
     if not os.path.exists(os.path.dirname(args.save_path)):
         os.makedirs(os.path.dirname(args.save_path))
     gcg = GCG(args)
-
-    for i in range(len(queries_id)):
+    for i in range(len(queries_id)//args.attack_batch_size):
         args.index = i
-        gcg.question = queries_text[i]
-        gcg.product_threshold = ground_truth[ground_truth['test_name'] == queries_id[i]].values[0][1]
+        gcg.question = queries_text[i*args.attack_batch_size:(i+1)*args.attack_batch_size]
+        # 按照batch获取ground truth，最终求均值
+        # gcg.ground_truth = ground_truth[ground_truth['test_name'] == queries_id[i*args.attack_batch_size:(i+1)*args.attack_batch_size]].values[0][1]
+        
+        gcg.product_threshold = ground_truth[ground_truth['test_name'].isin(queries_id[i*args.attack_batch_size:(i+1)*args.attack_batch_size])][f'matched_bar_{args.topk}'].values
+        # gcg.product_threshold = ground_truth[ground_truth['test_name'] == queries_id[i]].values[0][1]
         gcg.run(args.target)
