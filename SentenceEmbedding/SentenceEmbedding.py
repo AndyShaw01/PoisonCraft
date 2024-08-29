@@ -24,7 +24,7 @@ def get_pooling_results(token_embeddings, attention_mask, pooling_mode='mean'):
 # Custom similarity model
 class SentenceEmbeddingModel(nn.Module):
     def __init__(self, model_path):
-        # model_path = "MPNetModel"
+        self.model_path = model_path
         super(SentenceEmbeddingModel, self).__init__()
         if "MPNetModel" in model_path:
             self.model = MPNetModel.from_pretrained(model_path)
@@ -42,17 +42,16 @@ class SentenceEmbeddingModel(nn.Module):
     def forward(self, sentences=None, input_ids=None, inputs_embeds=None):
         if inputs_embeds is not None:  # Calculate embeddings from sentences directly
             # Tokenize sentences if input embeddings are not provided
-            model_output = self.model(inputs_embeds=inputs_embeds)
             encoded_input = {'attention_mask': (inputs_embeds != 0).any(dim=-1).long()}
+            model_output = self.model(inputs_embeds=inputs_embeds)
         elif input_ids is not None:  # Calculate embeddings from input ids
-            model_output = self.model(input_ids=input_ids)
             encoded_input = {'attention_mask': input_ids != 0}
-        else:
+            model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
+        else:                
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
 
         sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])
-        # Normalize embeddings
         # sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
         
         return sentence_embeddings
