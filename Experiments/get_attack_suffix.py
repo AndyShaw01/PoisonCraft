@@ -44,8 +44,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Get attack suffix')
-    parser.add_argument('--candidate_file', type=str, default='./Results/pre_exp/results_top_50.csv', help='The candidate file')
-    parser.add_argument('--queries_file', type=str, default='./Dataset/nq/train_queries_test.jsonl', help='The queries file')
+    parser.add_argument('--candidate_file', type=str, default='./Results/pre_exp/group/results_top_10.csv', help='The candidate file')
+    parser.add_argument('--queries_file', type=str, default='./Dataset/nq/category/categorized_jsonl_files/category_1.jsonl', help='The queries file')
 
     args = parser.parse_args()
 
