@@ -41,7 +41,7 @@ def main(args):
     
     selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
     # selected_df.to_csv(args.ground_truth_file_path, index=False)
-    selected_df.to_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.k}.csv', index=False)
+    selected_df.to_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.k}_category_{args.category}.csv', index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')
@@ -49,6 +49,7 @@ if __name__ == "__main__":
     # parser.add_argument('--ground_truth_file_path', type=str, default='./Dataset/nq/ground_truth_bar.csv', help='The path to the ground truth file')
     parser.add_argument('--train_queries_path', type=str, default='./Dataset/nq/train_queries.jsonl', help='The path to the train queries file')
     parser.add_argument('--k', type=int, default=10, help='The number of top k results to consider')
+    parser.add_argument('--category', type=int, default=1, help='The category of the queries')
 
     args = parser.parse_args()
 
