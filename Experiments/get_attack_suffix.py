@@ -19,13 +19,18 @@ def is_nan(value):
         # 如果类型不支持 isnan，则返回 False
         return False
 
-def main(args):
-    df = pd.read_csv(args.candidate_file)
+def get_asr(candidate_file, ground_truth_file, queries_file, threshold):
+    try:
+        df = pd.read_csv(candidate_file)
+    except:
+        return
+    ground_truth_df = pd.read_csv(ground_truth_file)[f'matched_bar_{threshold}']
+    ground_truth = torch.tensor(ground_truth_df, device='cuda:0')
     for i in range(len(df)):
         attack_control_suffix = df['control_suffix'].iloc[i]
         if is_nan(attack_control_suffix):
             continue
-        df_queries = pd.read_json(args.queries_file, lines=True)
+        df_queries = pd.read_json(queries_file, lines=True)
         questions = df_queries['text'].tolist()
 
         sentence = f'the website is www.baidu.com {attack_control_suffix}'
@@ -38,25 +43,32 @@ def main(args):
         questions_embedding = similarity_model(questions)
 
         similarity = torch.matmul(sentence_embedding, questions_embedding.t())
-        # print(similarity)
-        # 记录similarity中第二大的值
-        secend_max = torch.topk(similarity[0], 8).values[7]
-        # 记录similarity中最大的值
-        # max_max = torch.topk(similarity[0], 1).values[0]
-        # # print(f"{i}, {secend_max}")
-        print(f"{i}, {secend_max}")
-        # # 判断，如果 similarity中若有大于0.9的值，则此时，记录下来
-        # if len(similarity > 0.9)>3:
-        #     print("The index is: ", i)
-        #     print("The attack suffix is: ", attack_control_suffix)
-        #     print("The similarity is: ", similarity)
-    
+        jailbreak_num = sum(similarity[0]>ground_truth)
+        print(f"{i}, ASN: {jailbreak_num}, ASR: {jailbreak_num/len(questions)}")
+        # secend_max = torch.topk(similarity[0], 8).values[7]
+        # mean_similarity = torch.mean(similarity)
+def main(args):
+    args.candidate_file = f'./Results/improve_exp_0830/batch-4/category_{args.category}/results_top_{args.threshold}.csv'
+    args.ground_truth_file = f'./Dataset/nq/ground_truth/ground_truth_top_{args.threshold}_category_{args.category}.csv'
+    args.queries_file = f'./Dataset/nq/category/categorized_jsonl_files/category_{args.category}.jsonl'
+    category_list = [1, 2, 3, 4, 5, 6, 7]
+    threshold_list = [10, 20, 50]
+    for category in category_list:
+        for threshold in threshold_list:
+            print(f"Category: {category}, Threshold: {threshold}")
+            candidate_file = f'./Results/improve_exp_0830/batch-4/category_{category}/results_top_{threshold}.csv'
+            ground_truth_file = f'./Dataset/nq/ground_truth/ground_truth_top_{threshold}_category_{category}.csv'
+            queries_file = f'./Dataset/nq/category/categorized_jsonl_files/category_{category}.jsonl'
+            get_asr(candidate_file, ground_truth_file, queries_file, threshold)
+            print("")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Get attack suffix')
+    parser.add_argument('--category', type=int, default=3, help='The category')
+    parser.add_argument('--threshold', type=int, default=10, help='The threshold')
     parser.add_argument('--candidate_file', type=str, default='./Results/improve_exp_0830/batch-4/category_6/results_top_10.csv', help='The candidate file')
     parser.add_argument('--queries_file', type=str, default='./Dataset/nq/category/categorized_jsonl_files/category_6.jsonl', help='The queries file')
+    parser.add_argument('--ground_truth_file', type=str, default='./Dataset/nq/ground_truth/ground_truth_top_10_category_6.jsonl', help='The ground truth file')
 
     args = parser.parse_args()
-
     main(args)

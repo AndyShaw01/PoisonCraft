@@ -9,7 +9,7 @@ GROUP_MODE="category" # random, category
 GROUP_INDEX=$1
 MODE="all"
 
-TRAIN_FILE="./Dataset/nq/category/categorized_jsonl_files/category_${GROUP_INDEX}.jsonl"
+TRAIN_FILE="./Dataset/nq/category/categorized_jsonl_files_14/category_${GROUP_INDEX}.jsonl"
 
 ADD_EOS=False
 TOPK_LIST=10,20,50
