@@ -312,7 +312,7 @@ class GCG:
             
             # ========== setup initial loss========== # 
             if self.attack_batch_size > 1:
-                initial_loss = self.get_loss(question_embedding, target_embedding).mean()
+                initial_loss = self.get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
             else:
                 initial_loss = self.get_loss(question_embedding, target_embedding)
 
@@ -394,7 +394,7 @@ class GCG:
                     target_embeddings = self.model(input_ids=inputs)
                     if self.attack_batch_size > 1:
                         # losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), reduction='mean', dim=2)
-                        losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), dim=2)
+                        losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), dim=2) # get [128] loss
                     else:
                         losses = self.get_loss(question_embedding, target_embeddings)
                     dot_products = target_embeddings @ question_embedding.T
@@ -425,7 +425,10 @@ class GCG:
                     if curr_best_loss < self.loss_threshold and update_toks >= self.update_token_threshold:
                         target_embedding = self.model(input_ids=tmp_input.unsqueeze(0))
                         cosine_similarity = F.cosine_similarity(question_embedding, target_embedding)
-                        tmp_loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
+                        if self.attack_batch_mode == "mean" and self.attack_batch_size > 1:
+                            tmp_loss = self.get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
+                        else:
+                            tmp_loss = self.get_loss(question_embedding, target_embedding, reduction="none", dim=1)
 
                         logging.info("The tmp loss is: {}".format(tmp_loss.data.item()))
                         success = self.evaluate_matched(loss=tmp_loss,
@@ -499,11 +502,10 @@ class GCG:
         
         end_time = time.time()
         logging.info("Total time: {}".format(end_time - curr_time))
-        if self.attack_batch_mode == "mean":
-            try:
+        if success:
+            if self.attack_batch_mode == "mean":
                 self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].mean().item(), self.product_threshold.mean().item(), best_loss.data.item(), optim_steps[-1], attack_attempt])
-            except:
-                self.writter.writerow([self.args.index, self.question, store_control_str, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
+            else:
+                self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].tolist(), self.product_threshold, best_loss.data.item(), optim_steps[-1], attack_attempt])
         else:
-            self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].tolist(), self.product_threshold, best_loss.data.item(), optim_steps[-1], attack_attempt])
-        # ['index', 'question','control_suffix', 'similarity', 'similarity_threshold', 'loss', 'attack_steps', 'attack_attempt'])
+            print("The attack failed")
