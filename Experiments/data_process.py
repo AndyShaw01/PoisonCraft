@@ -7,6 +7,9 @@ import argparse
 
 
 def get_matched_bar(results_file_path, k):
+    """
+    Based on the results file, get the kth matched bar for each query.
+    """
     with open(results_file_path, 'r') as f:
         data = json.load(f)
         
