@@ -49,10 +49,9 @@ fi
 
 for TOPK in $(echo $TOPK_LIST | sed "s/,/ /g")
 do
-    python -u "$PYTHON_PRE_SCRIPT" --k $TOPK --category $GROUP_INDEX> "$LOG_PATH_PRE/get_ground_truth_${TOPK}}.log" 2>&1
+    python -u "$PYTHON_PRE_SCRIPT" --k $TOPK --category $GROUP_INDEX --train_queries_path $TRAIN_FILE> "$LOG_PATH_PRE/get_ground_truth_${TOPK}}.log" 2>&1
     if [ "$RUN_MODE" = "Test" ]; then
-        python -u "$PYTHON_EXP_SCRIPT" \
-            --model_path $MODEL_PATH $ADD_EOS_FLAG  \
+        python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  \
             --loss_threshold $LOSS_THRESHOLD \
             --attack_mode $MODE \
             --topk $TOPK \
@@ -60,6 +59,7 @@ do
             --attack_batch_size $ATTACK_BATCH_SIZE \
             --control_string_length $CONTROL_LENGTH \
             --group_index $GROUP_INDEX \
+            --train_queries_path $TRAIN_FILE \
         
     else
         if [ "$MODEL" = "t5-base" ]; then
