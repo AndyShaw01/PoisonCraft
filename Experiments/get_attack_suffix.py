@@ -48,17 +48,17 @@ def get_asr(candidate_file, ground_truth_file, queries_file, threshold):
         # secend_max = torch.topk(similarity[0], 8).values[7]
         # mean_similarity = torch.mean(similarity)
 def main(args):
-    args.candidate_file = f'./Results/improve_exp_0830/batch-4/category_{args.category}/results_top_{args.threshold}.csv'
-    args.ground_truth_file = f'./Dataset/nq/ground_truth/ground_truth_top_{args.threshold}_category_{args.category}.csv'
-    args.queries_file = f'./Dataset/nq/category/categorized_jsonl_files/category_{args.category}.jsonl'
-    category_list = [1, 2, 3, 4, 5, 6, 7]
+    # args.candidate_file = f'./Results/improve_exp/batch-4/category_{args.category}/results_top_{args.threshold}.csv'
+    # args.ground_truth_file = f'./Dataset/nq/ground_truth/ground_truth_top_{args.threshold}_category_{args.category}.csv'
+    # args.queries_file = f'./Dataset/nq/category/categorized_jsonl_files_14/category_{args.category}.jsonl'
+    category_list = [4, 6, 8, 11, 12]
     threshold_list = [10, 20, 50]
     for category in category_list:
         for threshold in threshold_list:
             print(f"Category: {category}, Threshold: {threshold}")
-            candidate_file = f'./Results/improve_exp_0830/batch-4/category_{category}/results_top_{threshold}.csv'
+            candidate_file = f'./Results/improve_exp/batch-4/category_{category}/results_top_{threshold}.csv'
             ground_truth_file = f'./Dataset/nq/ground_truth/ground_truth_top_{threshold}_category_{category}.csv'
-            queries_file = f'./Dataset/nq/category/categorized_jsonl_files/category_{category}.jsonl'
+            queries_file = f'./Dataset/nq/category/categorized_jsonl_files_14/category_{category}.jsonl'
             get_asr(candidate_file, ground_truth_file, queries_file, threshold)
             print("")
 
