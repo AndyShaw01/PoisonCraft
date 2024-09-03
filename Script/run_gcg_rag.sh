@@ -14,7 +14,7 @@ TRAIN_FILE="./Dataset/nq/category/categorized_jsonl_files_14/category_${GROUP_IN
 ADD_EOS=False
 TOPK_LIST=10,20,50
 
-CONTROL_LENGTH=40
+CONTROL_LENGTH=30
 ATTACK_BATCH_SIZE=4
 
 if [ "$MODEL" = "t5-base" ]; then
