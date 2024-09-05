@@ -27,7 +27,7 @@ def get_matched_bar(results_file_path, k):
         
     # kth_similarity_df = pd.DataFrame.from_dict(kth_similarity, orient='index', columns=[f'matched_bar_{k}'])
     kth_similarity_df = pd.DataFrame(kth_similarity)
-    kth_similarity_df.to_csv(f'./Dataset/nq/ground_truth/{k}_th_similarity.csv', index=False)
+    kth_similarity_df.to_csv(f'./Dataset/nq/ground_truth_train_recheck_0905/{k}_th_similarity.csv', index=False)
 
     return kth_similarity_df
 
@@ -44,7 +44,7 @@ def main(args):
     
     selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
     # selected_df.to_csv(args.ground_truth_file_path, index=False)
-    selected_df.to_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.k}_category_{args.category}.csv', index=False)
+    selected_df.to_csv(f'./Dataset/nq/ground_truth_train_recheck_0905/ground_truth_top_{args.k}_category_{args.category}.csv', index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')

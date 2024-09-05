@@ -12,7 +12,7 @@ do
     elif [ "$GROUP_NUM" = "3" ]; then
         GPU_NUM=3
     elif [ "$GROUP_NUM" = "4" ]; then
-        GPU_NUM=0
+        GPU_NUM=1
     elif [ "$GROUP_NUM" = "5" ]; then
         GPU_NUM=1
     elif [ "$GROUP_NUM" = "6" ]; then
@@ -20,15 +20,15 @@ do
     elif [ "$GROUP_NUM" = "7" ]; then
         GPU_NUM=3
     elif [ "$GROUP_NUM" = "8" ]; then
-        GPU_NUM=0
-    elif [ "$GROUP_NUM" = "9" ]; then
         GPU_NUM=1
+    elif [ "$GROUP_NUM" = "9" ]; then
+        GPU_NUM=3
     elif [ "$GROUP_NUM" = "10" ]; then
         GPU_NUM=2
     elif [ "$GROUP_NUM" = "11" ]; then
         GPU_NUM=3
     elif [ "$GROUP_NUM" = "12" ]; then
-        GPU_NUM=0
+        GPU_NUM=2
     elif [ "$GROUP_NUM" = "13" ]; then
         GPU_NUM=1
     elif [ "$GROUP_NUM" = "14" ]; then

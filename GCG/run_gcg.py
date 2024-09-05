@@ -31,7 +31,7 @@ def gcg_attack_all(args):
             queries_id.append(data['_id'])
             queries_text.append(data['text'])
     
-    ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth/ground_truth_top_{args.topk}_category_{args.group_index}.csv')
+    ground_truth = pd.read_csv(f'./Dataset/nq/ground_truth_train_recheck_0905/ground_truth_top_{args.topk}_category_{args.group_index}.csv')
     if args.attack_batch_size > 1:
         args.save_path = f"./Results/improve_exp/batch-{args.attack_batch_size}/category_{args.group_index}/results_top_{args.topk}.csv"
     else:

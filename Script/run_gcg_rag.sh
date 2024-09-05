@@ -9,7 +9,7 @@ GROUP_MODE="category" # random, category
 GROUP_INDEX=$1
 MODE="all"
 
-TRAIN_FILE="./Dataset/nq/category/categorized_jsonl_files_14/category_${GROUP_INDEX}.jsonl"
+TRAIN_FILE="./Dataset/nq/category/categorized_jsonl_files_14_train_recheck/category_${GROUP_INDEX}.jsonl"
 
 ADD_EOS=False
 TOPK_LIST=10,20,50
@@ -31,10 +31,10 @@ fi
 if [ "$ADD_EOS" = "True" ]; then
     LOG_PATH="Logs/${MODEL}/GCG-EOS"
 else
-    LOG_PATH="Logs/${MODEL}/GCG-Batch-${ATTACK_BATCH_SIZE}-${GROUP_MODE}-category_${GROUP_INDEX}"
+    LOG_PATH="Logs/${MODEL}/GCG-Batch-${ATTACK_BATCH_SIZE}-${GROUP_MODE}-category_${GROUP_INDEX}_cross_recheck"
 fi
 
-LOG_PATH_PRE="Logs/tmp_data/GCG-Batch-${ATTACK_BATCH_SIZE}-${GROUP_MODE}-category_${GROUP_INDEX}"
+LOG_PATH_PRE="Logs/tmp_data/GCG-Batch-${ATTACK_BATCH_SIZE}-${GROUP_MODE}-category_${GROUP_INDEX}_cross"
 
 mkdir -p "$LOG_PATH"
 mkdir -p "$LOG_PATH_PRE"
@@ -49,7 +49,7 @@ fi
 
 for TOPK in $(echo $TOPK_LIST | sed "s/,/ /g")
 do
-    python -u "$PYTHON_PRE_SCRIPT" --k $TOPK --category $GROUP_INDEX --train_queries_path $TRAIN_FILE> "$LOG_PATH_PRE/get_ground_truth_${TOPK}}.log" 2>&1
+    python -u "$PYTHON_PRE_SCRIPT" --k $TOPK --category $GROUP_INDEX --train_queries_path $TRAIN_FILE> "$LOG_PATH_PRE/get_ground_truth_${TOPK}_cross_recheck.log" 2>&1
     if [ "$RUN_MODE" = "Test" ]; then
         python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG  \
             --loss_threshold $LOSS_THRESHOLD \
