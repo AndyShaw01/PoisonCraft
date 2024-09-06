@@ -31,7 +31,7 @@ class OpenAILLM(LLM):
         self.model_path = model_path
         self.system_message = system_message if system_message is not None else "You are a helpful assistant."
 
-    def classify(self, prompt, temperature=0, max_length=512, n=1, max_trials=10, failure_sleep_time=10, target=None):
+    def classify(self, prompt, temperature=0, max_length=512, n=1, max_trials=20, failure_sleep_time=1, target=None):
         messages = [
             {"role": "system", "content": "You are a question classification assistant."},
             {"role": "user", "content": prompt}
@@ -67,54 +67,58 @@ class OpenAILLM(LLM):
         # Clean up the response and convert it to a list of integers
         cleaned_result = response.strip('[]')
         return list(map(int, cleaned_result.split(',')))
+
+def check_result(responses, queries, i):
+    prompt = f"""
+        I need to categorize my questions into the following 14 categories. In the meantime, here I am providing my questions, and the results of my categorization, 
+        and if you don't think my categorization makes sense, please provide me with what you think is correct.  
+        Returns only the list of corresponding symbols. e.g., [3, 2, 3, 4, 1,...] without any other text, only the list of corresponding symbols.
+
+        ==== 14 categories ====
+        1. History and Culture, 2. Entertainment and Media, 3. Sports, 4. Science, 5. Geography, 
+        6. Politics and Law, 7. Literature and Language, 8. Religion and Philosophy, 9. Economics and Business, 
+        10. Technology and Internet, 11. Film, TV, and Gaming, 12. Music, 13. Medicine and Health, 14. Miscellaneous
+        ==== 14 categories ====
+        ,
+        ==== My queries ====
+        1. {queries[i]}
+        2. {queries[i+1]}
+        3. {queries[i+2]}
+        4. {queries[i+3]}
+        ==== My queries ====
+        ,
+        ==== My categorization ===
+        {responses}
+        ==== My categorization ===
+        ,
+        ==== Corrected response ===
+        [...]
+        ==== Corrected response ===
+        """
+    return prompt
     
-def add_class(args):
-    # Read jsonl file as pandas
-    with open(args.file_path, 'r') as f:
-        data = f.readlines()
-        data = [json.loads(line) for line in data]
-    df = pd.DataFrame(data)
-    # Set a new column for the classification, int type
-    df['category'] = None
-    queries = df['text'].tolist()
-    # Get LLM
-    llm = OpenAILLM(model_path=args.model_path, api_key=args.api_key)
-    for i in range(0, len(queries), 10):
-        if i+10 > len(queries):
-            break
-        prompt_class_7 =   f"""
-                    Please classify the following questions by topic into one of these categories: 
-                    1. People-related, 2. Location-related, 3. Event-related, 4. Object or Concept-related, 5. History or Culture-related, 6. Sports-related, 7. Science and Nature-related.
-                    
-                    ========================================================
-                    Here are some example questions and their corresponding classifications:
+def init_query_classification(queries, i, mode):
+    if mode == 14:
+        prompt = f"""
+            Please classify the following questions by topic into one of these categories:
+            1. History and Culture, 2. Entertainment and Media, 3. Sports, 4. Science, 5. Geography, 
+            6. Politics and Law, 7. Literature and Language, 8. Religion and Philosophy, 9. Economics and Business, 
+            10. Technology and Internet, 11. Film, TV, and Gaming, 12. Music, 13. Medicine and Health, 
+            14. Miscellaneous
 
-                    1. "What was the cause of World War II?" (Event-related)
-                    1. "Who was the first president of the United States?" (People-related)
-                    3. "In which country are the Egyptian pyramids located?" (Location-related)
-                    4. "What is the theory of relativity?" (Object or Concept-related)
-                    5. "During which period did the Tang Dynasty rule in China?" (History or Culture-related)
-                    6. "What are the basic principles of photosynthesis?" (Science and Nature-related)
-                    7. "How often is the FIFA World Cup held?" (Sports-related)
-                    ========================================================
-                    the response is :[3, 2, 1, 4, 5, 7, 6]
-                    ========================================================
-                    Here are the questions:
+            ========================================================
+            Here are the questions:
 
-                    1. {queries[i]}
-                    2. {queries[i+1]}
-                    3. {queries[i+2]}
-                    4. {queries[i+3]}
-                    5. {queries[i+4]}
-                    6. {queries[i+5]}
-                    7. {queries[i+6]}
-                    8. {queries[i+7]}
-                    9. {queries[i+8]}
-                    10. {queries[i+9]}
+            1. {queries[i]}
+            2. {queries[i+1]}
+            3. {queries[i+2]}
+            4. {queries[i+3]}
 
-                    please classify them by topic into one of these categories, and returns only the list of corresponding symbols，e.g., [1, 2, 3, 4]
-                    """
-        prompt_class_20 = f"""
+            Please return to the 10 categories of questions above and returns only the list of corresponding symbols.
+            e.g., [3, 2, 1, 4, ...]
+            """
+    elif mode == 20:
+                prompt = f"""
                     Please classify the following questions by topic into one of these categories:
                     1. Historical Figures, 2. Actors/Performers, 3. Sports Figures, 4. Musicians/Singers, 5. Historical Events, 
                     6. Film/TV Release Dates, 7. Other Important Dates, 8. Geographical Locations, 9. Film/TV Filming Locations, 
@@ -161,15 +165,73 @@ def add_class(args):
                     9. {queries[i+8]}
                     10. {queries[i+9]}
 
+                    Please return to the 10 categories of questions above and returns only the list of corresponding symbols，e.g., [1, 2, 3, 4]
+                    """
+    elif mode == 7:
+                prompt =   f"""
+                    Please classify the following questions by topic into one of these categories: 
+                    1. People-related, 2. Location-related, 3. Event-related, 4. Object or Concept-related, 5. History or Culture-related, 6. Sports-related, 7. Science and Nature-related.
+                    
+                    ========================================================
+                    Here are some example questions and their corresponding classifications:
+
+                    1. "What was the cause of World War II?" (Event-related)
+                    1. "Who was the first president of the United States?" (People-related)
+                    3. "In which country are the Egyptian pyramids located?" (Location-related)
+                    4. "What is the theory of relativity?" (Object or Concept-related)
+                    5. "During which period did the Tang Dynasty rule in China?" (History or Culture-related)
+                    6. "What are the basic principles of photosynthesis?" (Science and Nature-related)
+                    7. "How often is the FIFA World Cup held?" (Sports-related)
+                    ========================================================
+                    the response is :[3, 2, 1, 4, 5, 7, 6]
+                    ========================================================
+                    Here are the questions:
+
+                    1. {queries[i]}
+                    2. {queries[i+1]}
+                    3. {queries[i+2]}
+                    4. {queries[i+3]}
+                    5. {queries[i+4]}
+                    6. {queries[i+5]}
+                    7. {queries[i+6]}
+                    8. {queries[i+7]}
+                    9. {queries[i+8]}
+                    10. {queries[i+9]}
+
                     please classify them by topic into one of these categories, and returns only the list of corresponding symbols，e.g., [1, 2, 3, 4]
+                    """
+    return prompt
 
-
-        """
-        responses = llm.classify(prompt_class_20)
+def add_class(args):
+    # Read jsonl file as pandas
+    with open(args.file_path, 'r') as f:
+        data = f.readlines()
+        data = [json.loads(line) for line in data]
+    df = pd.DataFrame(data)
+    # Set a new column for the classification, int type
+    df['category'] = None
+    queries = df['text'].tolist()
+    # Get LLM
+    llm = OpenAILLM(model_path=args.model_path, api_key=args.api_key)
+    for i in range(0, len(queries), 4):
+        if i+4 > len(queries):
+            break
+        prompt_class_14 = init_query_classification(queries, i, 14)
+        responses = llm.classify(prompt_class_14)
+        check_query = check_result(responses, queries, i)
+        re_responses = llm.classify(check_query)
+        if re_responses != responses:
+            print(f"Recheck the responses 1 : {re_responses}")
+            responses = re_responses
+            check_query = check_result(responses, queries, i)
+            re_responses = llm.classify(check_query)
+            if re_responses != responses:
+                print(f"Recheck the responses 2 : {re_responses}")
+                responses = re_responses
         df.loc[i:i + len(responses) - 1, 'category'] = responses
         print(df.loc[i:i + len(responses) - 1, ['text', 'category']])
     # Save the result to a new jsonl file
-    df.to_json('./Dataset/train_queries_add_class_20.jsonl', orient='records', lines=True)
+    df.to_json('./Dataset/train_queries_add_class_14_recheck.jsonl', orient='records', lines=True)
 
 def split_files(args):
     with open(args.output_path, 'r') as f:
@@ -181,11 +243,11 @@ def split_files(args):
     category_counts.sort_index(inplace=True)  
     print("Category proportions:\n", category_counts)
 
-    output_directory = "./Dataset/categorized_jsonl_files_20"
+    output_directory = "./Dataset/categorized_jsonl_files_14_train_recheck"
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    for category in range(1, 8):  
+    for category in range(1, 15):  
         category_df = df[df['category'] == category]
         file_path = os.path.join(output_directory, f"category_{category}.jsonl")
         
@@ -207,7 +269,7 @@ if __name__ == "__main__":
     parser.add_argument('--api_key', type=str, default='sk-proj-DNuBAhXd62pFLdzTF8ALT3BlbkFJzI24Rb3ozoB7USVOA2mn', help='OpenAI API key')
     parser.add_argument('--model_path', type=str, default='gpt-3.5-turbo', help='OpenAI model path')
     parser.add_argument('--file_path', type=str, default='./Dataset/train_queries.jsonl', help='The queries file')
-    parser.add_argument('--output_path', type=str, default='./Dataset/train_queries_add_class.jsonl', help='The output file')
+    parser.add_argument('--output_path', type=str, default='./Dataset/train_queries_add_class_14.jsonl', help='The output file')
     args = parser.parse_args()
 
     main(args)
