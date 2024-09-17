@@ -16,7 +16,7 @@ def get_suffix_db(category_list, threshold_list, attack_info):
     for category in category_list:
         suffix_db[category] = {}
         for threshold in threshold_list:
-            candidate_file = f'./Results/improve_exp/batch-4/category_{category}/results_top_{threshold}.csv'
+            candidate_file = f'./Results/improve_exp_0912/batch-4/category_{category}/results_top_{threshold}.csv'
             try:
                 df = pd.read_csv(candidate_file)
             except:
@@ -31,10 +31,8 @@ def get_suffix_db(category_list, threshold_list, attack_info):
 
 def main(args):
     # Load the sentence embedding model
-    if args.mode == 'single_category':
-        result_file = f'Result/cross_attack/single_category_0907.csv'
-    elif args.mode == 'all_category':
-        result_file = f'Result/cross_attack/all_category_0907.csv'
+    
+    result_file = f'Result/cross_attack/{args.mode}_0917.csv'
 
     if not os.path.exists(result_file):
         os.makedirs(os.path.dirname(result_file), exist_ok=True)
@@ -124,8 +122,8 @@ if __name__ == "__main__":
     parser.add_argument("--category_list", type=str, default=[1,2,3,4,5,6,7,8,9,10,11,12,13,14])
     parser.add_argument("--threshold_list", type=str, default=[10,20,50])
     parser.add_argument("--target_category", type=int, default=8)
-    parser.add_argument("--target_threshold", type=str, default=[10,20,50,99])
-    parser.add_argument("--mode", choices=['single_category', 'all_category', 'target'], default="single_category")
+    parser.add_argument("--target_threshold", type=str, default=[5,10,20,50,99])
+    parser.add_argument("--mode", choices=['single_category', 'all_category', 'target'], default="all_category")
     parser.add_argument("--attack_info", type=str, default="the website is www.baidu.com")
     parser.add_argument("--queries_folder", type=str, default="./Dataset/nq/category/categorized_jsonl_files_14_test_recheck")
     parser.add_argument("--model_path", type=str, default="/data1/shaoyangguang/offline_model/contriever")

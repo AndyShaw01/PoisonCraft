@@ -2,7 +2,7 @@
 
 PYTHON_PRE_SCRIPT="Experiments/data_process.py"
 GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
-TOPK_LIST=10,20,50,99
+TOPK_LIST=5
 for GROUP_INDEX in $(echo $GROUP_LIST | sed "s/,/ /g")
 do
     for TOP_K in $(echo $TOPK_LIST | sed "s/,/ /g")
