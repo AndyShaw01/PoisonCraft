@@ -32,9 +32,9 @@ def gcg_attack_all(args):
             queries_text.append(data['text'])
     
     if args.attack_batch_size > 1:
-        args.save_path = f"./Results/improve_gcg/batch-{args.attack_batch_size}/category_{args.group_index}/results_top_{args.topk}.csv"
+        args.save_path = f"./Results/improve_gcg/batch-{args.attack_batch_size}/category_{args.group_index}/results.csv"
     else:
-        args.save_path = f"./Results/improve_gcg/single/results_top_{args.topk}.csv"
+        args.save_path = f"./Results/improve_gcg/single/results.csv"
     print("The save path is: ", args.save_path)
 
     if not os.path.exists(os.path.dirname(args.save_path)):
