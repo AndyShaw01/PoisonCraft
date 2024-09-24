@@ -103,21 +103,20 @@ class GCG:
         self.max_successful_prompt = args.max_successful_prompt
         self.max_attack_steps = args.max_attack_steps
         self.loss_threshold = args.loss_threshold if hasattr(args, 'loss_threshold') else 0.5
-        self.early_stop_iterations = args.early_stop_iterations if hasattr(args, 'early_stop_iterations') else 200
-        self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 150
+        self.early_stop_iterations = args.early_stop_iterations if hasattr(args, 'early_stop_iterations') else 300
+        self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 50
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
         self.no_space = False
         self.attack_batch_size = args.attack_batch_size
         self.attack_batch_mode = args.attack_batch_mode
         self.setup()
-        self.product_threshold = args.product_threshold
         self.result_file = args.save_path
         if self.result_file is None:
             self.result_file = f'results-{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}.csv'
         self.raw_fp = open(self.result_file, 'w', buffering=1)
         self.writter = csv.writer(self.raw_fp)
         self.writter.writerow(
-            ['index', 'question','control_suffix', 'similarity', 'similarity_threshold', 'loss', 'attack_steps', 'attack_attempt'])
+            ['index', 'question','control_suffix', 'loss', 'attack_steps', 'attack_attempt'])
         
 
     def setup(self):
@@ -205,7 +204,7 @@ class GCG:
                 logging.error(f"IndexError: piece id is out of range for candidate at index {i}")
                 count += 1
         not_valid_ratio = round(count / len(control_cand), 2)            
-        logging.info(f"Warning: {not_valid_ratio} control candidates were not valid")
+        logging.warning(f"Warning: {not_valid_ratio} control candidates were not valid")
 
         if not_valid_ratio > 0.1 and cands != []:
             cands = cands + [cands[-1]] * (len(control_cand) - len(cands))
@@ -238,42 +237,14 @@ class GCG:
         new_control_toks = original_control_toks.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
         return new_control_toks
     
-    def evaluate_matched(self, loss=None, question_embedding=None, target_embedding=None, mode="product"):
-        if self.attack_batch_size > 1:
-            if mode == "product":
-                product = question_embedding @ target_embedding.T
-                logging.info(f"dot product_similarity:\t{product.mean().item()}")
-                if self.attack_batch_mode == "mean":
-                    product = product.mean()
-                    product_threshold = torch.tensor(self.product_threshold, device=self.model.device).mean()
-                    if product > product_threshold:
-                        return True
-                    else:
-                        return False    
-                else:                    
-                    product_threshold = torch.tensor(self.product_threshold, device=self.model.device).unsqueeze(0).view(-1, 1)
-                    # Perform element-wise comparison
-                    all_greater = torch.all(product > product_threshold).item()
-                    return bool(all_greater)
-        else:
-            if mode == "product":
-                product = question_embedding @ target_embedding.T
-                logging.info(f"dot product_similarity:\t{product.item()}")
-                if product > self.product_threshold:
-                    return True
-                else:
-                    return False
-            elif mode == "loss":
-                product = question_embedding @ target_embedding.T
-                logging.info(f"dot product_similarity:\t{product}")
-                if loss < self.loss_threshold:
-                    return True
-                else:
-                    return False
+    def evaluate_matched(self, loss=None):
+        # todo
+        pass
+            
 
     def run(self, target):
         self._nonascii_toks, self._ascii_toks = get_nonascii_toks(self.args.model_path, self.tokenizer)
-        curr_time = time.time()
+        
         optim_prompts = []
         optim_steps = []
         attack_attempt = 0
@@ -283,6 +254,7 @@ class GCG:
             attack_attempt += 1
             curr_optim_prompts = []
             curr_optim_steps = []
+            last_optim_steps = 0
             best_loss = 999999
             end_iter = False
             logging.info(f"Attack attempt {attack_attempt}")
@@ -317,30 +289,12 @@ class GCG:
                 initial_loss = self.get_loss(question_embedding, target_embedding)
 
             logging.info(f"Initial loss: {initial_loss.item()}")
-
-            success = self.evaluate_matched(loss=initial_loss, 
-                                            question_embedding=question_embedding,
-                                            target_embedding=target_embedding)
-            if success:
-                update_toks = 0
-                logging.info("Your bad info is matched!")
-                curr_optim_prompts.append(control_str)
-                curr_optim_steps.append(attack_steps)
-                logging.info("Current success prompt number: {}".format(len(curr_optim_prompts)))
-
-                if len(curr_optim_prompts) >= self.max_prompts_in_single_attack:
-                    end_iter = True
-                    
-                if len(optim_prompts) + len(curr_optim_prompts) >= self.max_successful_prompt:
-                    end_iter = True
-
             # ========== start attack ========== #
             local_optim_counter = 0
             update_toks = 0
             best_loss = 999999
 
             for i in range(self.max_steps):
-                step_time = time.time()
 
                 # The loss is too high for a long time
                 if self.early_stop and i > self.early_stop_iterations and best_loss > self.loss_threshold:
@@ -391,121 +345,55 @@ class GCG:
                             inputs = tmp_input.unsqueeze(0) # [1, len]
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0) # [N, len]
+                    
                     target_embeddings = self.model(input_ids=inputs)
                     if self.attack_batch_size > 1:
-                        # losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), reduction='mean', dim=2)
                         losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), dim=2) # get [128] loss
                     else:
                         losses = self.get_loss(question_embedding, target_embeddings)
-                    dot_products = target_embeddings @ question_embedding.T
                     # del inputs ; gc.collect()
                     losses[torch.isnan(losses)] = 999999
                     curr_best_loss, best_idx = torch.min(losses, dim=0)
                     curr_best_control_tokens = candidates[best_idx]
                     del inputs ; gc.collect()
                 if self.attack_batch_mode == "mean":
-                    logging.info(f"current best loss: {curr_best_loss.item()}\tcurrent best similarity: {dot_products[best_idx].mean().item()}")
+                    logging.info(f"current best loss: {curr_best_loss.item()}")
                 else:
-                    logging.info(f"current best loss: {curr_best_loss.item()}\tcurrent best similarity: {dot_products[best_idx].tolist()}")
+                    logging.info(f"current best loss: {curr_best_loss.item()}")
+
                 if curr_best_loss < best_loss:
                     update_toks += 1
                     local_optim_counter = 0
                     best_loss = curr_best_loss
                     control_tokens = deepcopy(curr_best_control_tokens) # in the next iteration, we will use the best control tokens to update the input_ids
                     logging.info("Step: {}, Loss: {}".format(i, best_loss.data.item()))
-
-                    # test the can we matched the bad info, using the best control tokens 
-                    tmp_input = input_ids.clone()
-                    tmp_input[control_slice] = curr_best_control_tokens # the best control tokens in this iteration. so the tmp_input is the best input_ids
-                    # tmp_input = tmp_input[:target_slice.start]
-
-                    num_input_tokens = len(tmp_input)
-
-                    # The final test for the attack adv parts
-                    if curr_best_loss < self.loss_threshold and update_toks >= self.update_token_threshold:
-                        target_embedding = self.model(input_ids=tmp_input.unsqueeze(0))
-                        cosine_similarity = F.cosine_similarity(question_embedding, target_embedding)
-                        if self.attack_batch_mode == "mean" and self.attack_batch_size > 1:
-                            tmp_loss = self.get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
-                        else:
-                            tmp_loss = self.get_loss(question_embedding, target_embedding, reduction="none", dim=1)
-
-                        logging.info("The tmp loss is: {}".format(tmp_loss.data.item()))
-                        success = self.evaluate_matched(loss=tmp_loss,
-                                                        question_embedding=question_embedding,
-                                                        target_embedding=target_embedding)
-                        if success:
-                            current_control_str = self.tokenizer.decode(tmp_input[control_slice.start: control_slice.stop])
-                            # if the str start with space, remove the space
-                            if current_control_str[0] == ' ':
-                                current_control_str = current_control_str[1: ]
-                            if self.no_space:
-                                store_control_str = current_control_str
-                                current_control_str = target + current_control_str
-                            else:
-                                store_control_str = current_control_str
-                                current_control_str = target + ' ' + current_control_str
-                                
-                            
-                            logging.info("Current control string: {}".format(current_control_str))
-                            embedding = self.model([current_control_str])
-                            cosine_similarity = F.cosine_similarity(question_embedding, embedding)
-                            loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=self.model.device))
-                            success = self.evaluate_matched(loss=loss,
-                                                            question_embedding=question_embedding,
-                                                            target_embedding=target_embedding)
-                            if success:
-                                update_toks = 0
-                                logging.info("Attack success, append the current trigger to optim_prompts")
-                                curr_optim_prompts.append(current_control_str)
-                                curr_optim_steps.append(attack_steps)
-                                logging.info("Current success prompt number: {}".format(len(curr_optim_prompts)))
-                                if len(curr_optim_prompts) >= self.max_prompts_in_single_attack:
-                                    end_iter = True
-                                    
-                                if len(optim_prompts) + len(curr_optim_prompts) >= self.max_successful_prompt:
-                                    end_iter = True
-                                
+                    current_control_str = self.tokenizer.decode(curr_best_control_tokens)
                 else:
                     if isinstance(best_loss, int):
-                        logging.info("After {} iterations, the best loss is still int".format(i, best_loss))
-                        loss = best_loss
+                        logging.info("After {} iterations, the best loss is: ".format(i, best_loss))
                     else:
-                        if self.attack_batch_mode == "mean":
-                            logging.info("After {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].mean().item(), self.product_threshold.mean().item()))
-                        else:
-                            logging.info("After {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].tolist(), self.product_threshold))
+                        logging.info("After {} iterations, the best loss is: ".format(i, best_loss.data.item()))
+
                     local_optim_counter += 1
+                    print("local_optim_counter: ", local_optim_counter)
 
                 del candidates, tmp_input, losses ; gc.collect()
                 self.model.zeio_grad()
-
-                step_end_time = time.time()
-                # logging.info("Time for this step: {}".format(step_end_time - step_time))
             
             if isinstance(best_loss, int):
-                if self.attack_batch_mode == "mean":
-                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss, dot_products[best_idx].mean().item(), self.product_threshold.mean().item()))    
-                else:
-                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss, dot_products[best_idx].tolist(), self.product_threshold))
+                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss))
             else:
-                if self.attack_batch_mode == "mean":
-                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].mean().item(), self.product_threshold.mean().item()))
-                else:
-                    logging.info("In this attempt, after {} iterations, the best loss is: {}, the best similarity is :{}, the threshold is {}".format(i, best_loss.data.item(), dot_products[best_idx].tolist(), self.product_threshold))
+                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
+            
             logging.info('In {} attemp, number of optim prompts is: {}'.format(attack_attempt, len(curr_optim_prompts)))
 
-            optim_prompts.extend(curr_optim_prompts)
-            optim_steps.extend(curr_optim_steps)
+            optim_prompts.append(current_control_str)
+            optim_steps.append(attack_steps)
             
             logging.info('After {} attemp, the total number of optim prompts is: {}'.format(attack_attempt, len(optim_prompts)))
         
-        end_time = time.time()
-        logging.info("Total time: {}".format(end_time - curr_time))
-        if success:
-            if self.attack_batch_mode == "mean":
-                self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].mean().item(), self.product_threshold.mean().item(), best_loss.data.item(), optim_steps[-1], attack_attempt])
-            else:
-                self.writter.writerow([self.args.index, self.question, store_control_str,  dot_products[best_idx].tolist(), self.product_threshold, best_loss.data.item(), optim_steps[-1], attack_attempt])
-        else:
-            print("The attack failed")
+        for i in range(len(optim_prompts)):
+            self.writter.writerow([self.args.index, self.question, optim_prompts[i], best_loss.data.item(), optim_steps[i], attack_attempt])
+
+        
+        
