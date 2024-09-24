@@ -60,12 +60,12 @@ else
         python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
             --loss_threshold $LOSS_THRESHOLD \
             --attack_mode $MODE \
-            --control_string_length $CONTROL_LENGTH > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
+            --control_string_length $CONTROL_LENGTH > "$LOG_PATH/gcg_${RUN_MODE}.log" 2>&1
     elif [ "$MODEL" = "MPNetModel" ]; then
         python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
             --loss_threshold $LOSS_THRESHOLD \
             --attack_mode $MODE \
-            --control_string_length $CONTROL_LENGTH > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
+            --control_string_length $CONTROL_LENGTH > "$LOG_PATH/gcg_${RUN_MODE}.log" 2>&1
     elif [ "$MODEL" = "contriever" ]; then
         python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
             --loss_threshold $LOSS_THRESHOLD \
@@ -74,7 +74,7 @@ else
             --group_mode $GROUP_MODE \
             --attack_batch_size $ATTACK_BATCH_SIZE \
             --train_queries_path $TRAIN_FILE \
-            --group_index $GROUP_INDEX > "$LOG_PATH/gcg_${RUN_MODE}_top${TOPK}.log" 2>&1
+            --group_index $GROUP_INDEX > "$LOG_PATH/gcg_${RUN_MODE}.log" 2>&1
         echo "python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG --loss_threshold $LOSS_THRESHOLD --attack_mode $MODE --control_string_length $CONTROL_LENGTH --group_mode $GROUP_MODE --attack_batch_size $ATTACK_BATCH_SIZE --train_queries_path $TRAIN_FILE --group_index $GROUP_INDEX --topk $TOPK "
     fi
 fi
