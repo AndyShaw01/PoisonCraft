@@ -54,7 +54,6 @@ if [ "$RUN_MODE" = "Test" ]; then
         --control_string_length $CONTROL_LENGTH \
         --group_index $GROUP_INDEX \
         --train_queries_path $TRAIN_FILE \
-    
 else
     if [ "$MODEL" = "t5-base" ]; then
         python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
