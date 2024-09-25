@@ -103,7 +103,7 @@ class GCG:
         self.max_successful_prompt = args.max_successful_prompt
         self.max_attack_steps = args.max_attack_steps
         self.loss_threshold = args.loss_threshold if hasattr(args, 'loss_threshold') else 0.5
-        self.early_stop_iterations = args.early_stop_iterations if hasattr(args, 'early_stop_iterations') else 300
+        self.early_stop_iterations = args.early_stop_iterations if hasattr(args, 'early_stop_iterations') else 350
         self.early_stop_local_optim = args.early_stop_local_optim if hasattr(args, 'early_stop_local_optim') else 50
         self.update_token_threshold = args.update_token_threshold if hasattr(args, 'update_token_threshold') else 5
         self.no_space = False
