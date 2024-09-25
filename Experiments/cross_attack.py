@@ -9,30 +9,29 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
 
-def get_suffix_db(category_list, threshold_list, attack_info):
-    suffix_db = {}
+def get_suffix_db(category_list, attack_info):
+    # suffix_db = {}
     suffix_all = {}
     all_list = []
     for category in category_list:
-        suffix_db[category] = {}
-        for threshold in threshold_list:
-            candidate_file = f'./Results/improve_exp_0912/batch-4/category_{category}/results_top_{threshold}.csv'
-            try:
-                df = pd.read_csv(candidate_file)
-            except:
-                continue
-            attack_suffix = [attack_info + ' ' + x for x in df['control_suffix'].tolist()]
-            suffix_db[category][threshold] = attack_suffix
-            suffix_all[category] = attack_suffix
-            all_list += attack_suffix
+        # suffix_db[category] = {}
+        candidate_file = f'./Results/improve_gcg/batch-4/category_{category}/results.csv'
+        try:
+            df = pd.read_csv(candidate_file)
+        except:
+            continue
+        attack_suffix = [attack_info + ' ' + x for x in df['control_suffix'].tolist()]
+        # suffix_db[category][threshold] = attack_suffix
+        suffix_all[category] = attack_suffix
+        all_list += attack_suffix
 
-    return suffix_db, suffix_all, all_list
+    return suffix_all, all_list
     
 
 def main(args):
     # Load the sentence embedding model
     
-    result_file = f'Result/cross_attack/{args.mode}_0917.csv'
+    result_file = f'Result/cross_attack/{args.mode}_0925.csv'
 
     if not os.path.exists(result_file):
         os.makedirs(os.path.dirname(result_file), exist_ok=True)
@@ -53,7 +52,7 @@ def main(args):
         # Load Attack DB and embed them
         category_list = args.category_list
         threshold_list = args.threshold_list
-        attack_db, attack_all, all_list = get_suffix_db(category_list, threshold_list, args.attack_info)
+        attack_all, all_list = get_suffix_db(category_list, args.attack_info)
 
         # Load the ground truth
         if args.mode == 'target':
