@@ -2,7 +2,7 @@
 
 BASH_SCRIPT="./Script/run_gcg_rag.sh"
 # GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
-GROUP_LIST="1"
+GROUP_NUM="1"
 CONTROL_LENGTH_LIST="50,55,60,65,70,75"
 GPU_LIST="0,1,2,3"
 for CONTROL_LENGTH in $(echo $CONTROL_LENGTH_LIST | sed "s/,/ /g")
