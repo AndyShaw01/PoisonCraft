@@ -1,40 +1,26 @@
 #!/bin/bash
 
 BASH_SCRIPT="./Script/run_gcg_rag.sh"
-GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
+# GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
+GROUP_LIST="1"
+CONTROL_LENGTH_LIST="50,55,60,65,70,75"
 GPU_LIST="0,1,2,3"
-for GROUP_NUM in $(echo $GROUP_LIST | sed "s/,/ /g")
+for CONTROL_LENGTH in $(echo $CONTROL_LENGTH_LIST | sed "s/,/ /g")
 do
-    if [ "$GROUP_NUM" = "1" ]; then
-        GPU_NUM=0
-    elif [ "$GROUP_NUM" = "2" ]; then
+    if [ "$CONTROL_LENGTH" = "50" ]; then
         GPU_NUM=1
-    elif [ "$GROUP_NUM" = "3" ]; then
+    elif [ "$CONTROL_LENGTH" = "55" ]; then
         GPU_NUM=2
-    elif [ "$GROUP_NUM" = "4" ]; then
+    elif [ "$CONTROL_LENGTH" = "60" ]; then
         GPU_NUM=3
-    elif [ "$GROUP_NUM" = "5" ]; then
-        GPU_NUM=2
-    elif [ "$GROUP_NUM" = "6" ]; then
+    elif [ "$CONTROL_LENGTH" = "65" ]; then
         GPU_NUM=1
-    elif [ "$GROUP_NUM" = "7" ]; then
+    elif [ "$CONTROL_LENGTH" = "60" ]; then
         GPU_NUM=2
-    elif [ "$GROUP_NUM" = "8" ]; then
-        GPU_NUM=3
-    elif [ "$GROUP_NUM" = "9" ]; then
-        GPU_NUM=0
-    elif [ "$GROUP_NUM" = "10" ]; then
-        GPU_NUM=1
-    elif [ "$GROUP_NUM" = "11" ]; then
-        GPU_NUM=0
-    elif [ "$GROUP_NUM" = "12" ]; then
-        GPU_NUM=3
-    elif [ "$GROUP_NUM" = "13" ]; then
-        GPU_NUM=2
-    elif [ "$GROUP_NUM" = "14" ]; then
+    elif [ "$CONTROL_LENGTH" = "75" ]; then
         GPU_NUM=3
     fi
-    bash $BASH_SCRIPT $GROUP_NUM $GPU_NUM &
+    bash $BASH_SCRIPT $GROUP_NUM $CONTROL_LENGTH $GPU_NUM &
     echo "Group $GROUP_NUM is running on GPU $GPU_NUM"
 done
 
