@@ -16,7 +16,7 @@ def get_suffix_db_test(category_list,control_str_len_list, attack_info, aggregat
     # suffix_db = {}
     suffix_all = {}
     all_list = []
-    exp_list = ['improve_gcg', 'improve_gcg_0926']
+    exp_list = ['improve_gcg_0926', 'improve_gcg_0929', 'improve_gcg_0930']
     for category in category_list:
         for control_str_len in control_str_len_list:
             if aggregate:
@@ -79,7 +79,7 @@ def main(args):
     raw_fp = open(args.result_file, 'w', buffering=1)
     writter = csv.writer(raw_fp)
     writter.writerow(
-        ['category_id', 'attacked_num', 'attacked_rate'])
+        ['category_id', 'category_num','attacked_num', 'attacked_rate'])
     # load queries, corpus, qrels
     queries = load_jsonl_to_json(args.queries_folder + f"/category_{args.target_category}.jsonl")
     # queries = load_jsonl_to_json("./Dataset/case_study/case_study.jsonl")
@@ -119,7 +119,7 @@ def main(args):
     # all_results = []
     asr_list=[]
     ret_list=[]
-
+    
     for _iter in range(len(args.category_list)):
         queries = load_jsonl_to_json(args.queries_folder + f"/category_{args.category_list[_iter]}.jsonl")
         print("len(queries):", len(queries))
@@ -160,12 +160,11 @@ def main(args):
             cnt_from_adv = sum([i in adv_text_list for i in topk_contents])
             
             ret_sublist.append(cnt_from_adv)
-            
         
             query_prompt = wrap_prompt(question, topk_contents, prompt_id=4)
             response = llm.query(query_prompt)
             result = predictor.predict(response)
-            # print(f"{response}")
+            print(f"{response}")
             all_results.append(result)
             # print(f'Output: {response}\n\n')
             injected_adv=[i for i in topk_contents if i in adv_text_list]
@@ -180,7 +179,7 @@ def main(args):
                 }
             )
         print(ret_sublist)
-        result_folder = "./Result/validation/category_results_test"
+        result_folder = "./Result/validation/category_results_test_3_merge"
         if not os.path.exists(result_folder):
             os.makedirs(result_folder)
         with open(f'{result_folder}/category_{_iter}.json', 'w') as json_file:
@@ -188,7 +187,7 @@ def main(args):
         print(all_results)
         print(f"ASN: {sum(all_results)}")
         print(f"ASR: {sum(all_results)/len(all_results)}")
-        writter.writerow([args.category_list[_iter], sum(all_results), sum(all_results)/len(all_results)])
+        writter.writerow([args.category_list[_iter], len(all_results), sum(all_results), sum(all_results)/len(all_results)])
 if __name__ == "__main__":
     args = setup()
     
