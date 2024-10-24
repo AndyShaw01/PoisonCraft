@@ -3,6 +3,7 @@ import json
 import random
 import torch
 import csv
+import re
 import numpy as np
 import pandas as pd
 
@@ -209,3 +210,21 @@ def load_tsv_to_dict(tsv_file, key_field='id'):
 
     # Return the resulting dictionary
     return tsv_dict
+
+class Predictor:
+    def __init__(self, path):
+        self.path = path
+
+    def predict(self, sequences):
+        raise NotImplementedError("Predictor must implement predict method.")
+
+class MatchPredictor(Predictor):
+    def __init__(self, match_target):
+        self.match_target = match_target
+
+    def predict(self, sequences):
+        MATCH_REGEX = re.compile(re.escape(self.match_target), re.IGNORECASE)
+        # for sequence in sequences:
+            # check if the sequence contains the match target
+        results = int(bool(MATCH_REGEX.search(sequences)))
+        return results
