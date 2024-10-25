@@ -82,11 +82,14 @@ class BatchSampler:
                 self.queries_id.append(data['_id'])
                 self.queries_text.append(data['text'])
 
-    def create_batches(self):
-        # 随机打乱样本顺序
-        random.shuffle(self.queries_text)
-        # 将样本按batch_size分组
-        self.batches = [self.queries_text[i:i + self.attack_batch_size] for i in range(0, len(self.queries_text), self.attack_batch_size)]
+    def create_batches(self, repeat_times=1):
+        for i in range(repeat_times):
+            # 随机打乱样本顺序
+            random.shuffle(self.queries_text)
+            # 将样本按batch_size分组
+            batches = [self.queries_text[i:i + self.attack_batch_size] for i in range(0, len(self.queries_text), self.attack_batch_size)]
+            self.batches.extend(batches)
+        return self.batches
 
     # def run_batches(self):
     #     gcg = GCG(self)  # 确保GCG类接受当前实例
@@ -119,13 +122,13 @@ def gcg_attack_all(args):
     #         queries_text.append(data['text'])
     
     if args.attack_batch_size > 1:
-        args.save_path = f"./Results/improve_gcg/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}.csv"
+        args.save_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}.csv"
     else:
         args.save_path = f"./Results/improve_gcg/single/results.csv"
     print("The save path is: ", args.save_path)
 
-    if not os.path.exists(os.path.dirname(args.save_path)):
-        os.makedirs(os.path.dirname(args.save_path))
+    # if not os.path.exists(os.path.dirname(args.save_path)):
+    #     os.makedirs(os.path.dirname(args.save_path))
 
     # gcg = GCG(args)
     # for i in range(len(queries_id)//args.attack_batch_size):
@@ -137,8 +140,7 @@ def gcg_attack_all(args):
                                  args.group_index, 
                                  args.control_string_length, 
                                  args.target)
-    batch_sampler.create_batches()
-
+    batch_sampler.create_batches(repeat_times=4)
     gcg = GCG(args)
     for i, batch in enumerate(batch_sampler.batches):
         args.index = i
