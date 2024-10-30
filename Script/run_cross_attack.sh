@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export all_proxy=socks5://192.168.112.1:7890 
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 PYTHON_SCRIPT="Experiments/cross_attack.py"
 

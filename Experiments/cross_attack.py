@@ -19,7 +19,8 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
             if aggregate:
                 for exp in exp_list:
                     # candidate_file = f'./all_varified_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv'
-                    candidate_file = f'./all_varified_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv'
+                    # candidate_file = f'./all_varified_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv'
+                    candidate_file = f'./part_results/Results/improve_gcg_test/batch-4-ab-5/category_{category}/results_{control_str_len}.csv'
                     try:
                         df = pd.read_csv(candidate_file)
                     except:
@@ -28,7 +29,7 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
                     suffix_all[control_str_len] = attack_suffix
                     all_list += attack_suffix
             else:
-                candidate_file = f'./Results/improve_gcg/batch-4/category_{category}/results_{control_str_len}.csv'
+                candidate_file = f'./Results/improve_gcg/batch-4-ab/category_{category}/results_{control_str_len}.csv'
                 try:
                     df = pd.read_csv(candidate_file)
                 except:
@@ -43,7 +44,7 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
 def main(args):
     # Load the sentence embedding model
     
-    result_file = f'Result/cross_attack/{args.mode}_controllentest_category_1_0927.csv'
+    result_file = f'Result/cross_attack/{args.mode}_controllentest_category_all_part_1030_part-ab.csv'
 
     if not os.path.exists(result_file):
         os.makedirs(os.path.dirname(result_file), exist_ok=True)
@@ -105,7 +106,7 @@ def main(args):
                     writter.writerow([target_threshold, category_list[i], jailbreak_num, round(jailbreak_num/len(queries), 4)])
                 print("\n")
         elif args.mode == 'all_category_by_block':
-            block_size = 1024  # 根据你的显存调整块的大小
+            block_size = 2048  # 根据你的显存调整块的大小
             num_blocks = (len(all_list) + block_size - 1) // block_size  # 计算块的数量
             print(f"{args.target_threshold}")
             for target_threshold in args.target_threshold:
