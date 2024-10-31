@@ -20,7 +20,7 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
                 for exp in exp_list:
                     # candidate_file = f'./all_varified_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv'
                     # candidate_file = f'./all_varified_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv'
-                    candidate_file = f'./result_1031/Results/improve_gcg_test/batch-4/category_{category}/results_{control_str_len}.csv'
+                    candidate_file = f'./part_results/Results/improve_gcg_test/batch-4/category_{category}/results_{control_str_len}.csv'
                     try:
                         df = pd.read_csv(candidate_file)
                     except:
@@ -31,7 +31,7 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
             else:
                 print("error")
                 # candidate_file = f'./Results/improve_gcg/batch-4-ab/category_{category}/results_{control_str_len}.csv'
-                candidate_file = f'./result_1031/Results/improve_gcg_test/batch-4/category_{category}/results_{control_str_len}.csv'
+                candidate_file = f'./part_results/Results/improve_gcg_test/batch-4/category_{category}/results_{control_str_len}.csv'
                 try:
                     df = pd.read_csv(candidate_file)
                 except:
