@@ -46,8 +46,8 @@ def setup():
 
 def main(args):
     # load queries, corpus, qrels
-    # queries = load_jsonl_to_json(args.queries_folder + f"/category_{args.target_category}.jsonl")
-    queries = load_jsonl_to_json("./Dataset/case_study/case_study.jsonl")
+    queries = load_jsonl_to_json(args.queries_folder + f"/category_{args.target_category}.jsonl")
+    # queries = load_jsonl_to_json("./Dataset/case_study/case_study.jsonl")
     corpus = load_jsonl_to_dict("./Dataset/nq/corpus.jsonl", key_field="_id")
     qrels = load_tsv_to_dict("./Dataset/nq/qrels/ground_truth.tsv", key_field="query-id")
     # load attack info

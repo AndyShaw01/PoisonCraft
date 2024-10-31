@@ -83,7 +83,7 @@ def setup():
     parser.add_argument('--orig_beir_results', type=str, default=None, help="Eval results of eval_model on  the original beir eval_dataset")
     parser.add_argument("--query_results_dir", type=str, default='main')
     parser.add_argument("--target_queries_path", type=str, default="./Dataset/nq/test_queries.jsonl", help="Target queries for attack")
-    parser.add_argument("--result_file", type=str, default="./Result/validation/category_results_with_prefix.csv", help="Result file path")
+    parser.add_argument("--result_file", type=str, default="./Result/validation/pr0-5/results.csv", help="Result file path")
     parser.add_argument("--control_str_len_list", type=str, default=[50,55,60,65,70,75,80,85])
     # LLM settings
     parser.add_argument('--model_config_path', default="gpt-3.5-turbo-0125", type=str)          # set in bash script
@@ -107,6 +107,14 @@ def setup():
 
     return args
 
+def batch_process_embeddings(embedding_model, texts, batch_size=32):
+    embeddings = []
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        batch_embeddings = embedding_model(batch)
+        embeddings.append(batch_embeddings)
+    return torch.cat(embeddings, dim=0)
+
 def main(args):
     raw_fp = open(args.result_file, 'w', buffering=1)
     writter = csv.writer(raw_fp)
@@ -121,7 +129,6 @@ def main(args):
     # load attack info
     
     adv_text_groups, adv_text_list = get_suffix_db(args.category_list, args.control_str_len_list, args.attack_info)
-    pdb.set_trace()
     print("len(adv_text_list):", len(adv_text_list))
     
     # load BEIR top_k results  
@@ -145,8 +152,10 @@ def main(args):
     with torch.no_grad():
         embedding_model = SentenceEmbeddingModel(args.embedding_model_path)
         embedding_model.to(embedding_model.device)
-        pdb.set_trace()
-        adv_embs = embedding_model(adv_text_list)
+        
+        # adv_embs = embedding_model(adv_text_list)
+        adv_embs = batch_process_embeddings(embedding_model, adv_text_list, batch_size=2048)
+
     # load llm
     llm = create_model(args.model_config_path)
     # load predictor
@@ -154,7 +163,7 @@ def main(args):
     # all_results = []
     asr_list=[]
     ret_list=[]
-    pdb.set_trace()
+
     for _iter in range(len(args.category_list)):
         queries = load_jsonl_to_json(args.queries_folder + f"/category_{args.category_list[_iter]}.jsonl")
         print("len(queries):", len(queries))
@@ -166,7 +175,6 @@ def main(args):
             top1_idx = list(results[queries[i]['_id']].keys())[0]
             top1_score = results[queries[i]['_id']][top1_idx]
             target_queries[i] = {'query': target_queries[i], 'top1_score': top1_score, 'id': queries[i]['_id']}
-
         asr_cnt=0
         ret_sublist=[]
         iter_results = []
@@ -179,11 +187,9 @@ def main(args):
 
             gt_ids = list(qrels[queries[i]['_id']].keys())
             # ground_truth = [corpus[id]["text"] for id in gt_ids]
-
             topk_idx = list(results[queries[i]['_id']].keys())[:args.top_k]
             topk_results = [{'score': results[queries[i]['_id']][idx], 'context': corpus[idx]['text']} for idx in topk_idx]            
             query_emb = embedding_model(question)
-            pdb.set_trace()
             for j in range(len(adv_text_list)):
                 adv_emb = adv_embs[j, :].unsqueeze(0)
                 if args.score_function == 'dot':
@@ -215,7 +221,7 @@ def main(args):
                 }
             )
         print(ret_sublist)
-        result_folder = "./Result/validation/pr0-5/"
+        result_folder = "./Result/validation/posioned_rate_0-5/"
         if not os.path.exists(result_folder):
             os.makedirs(result_folder)
         with open(f'{result_folder}/category_{_iter}.json', 'w') as json_file:
