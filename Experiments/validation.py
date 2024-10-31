@@ -53,6 +53,7 @@ def main(args):
     # load attack info
     
     adv_text_db, adv_text_groups, adv_text_list = get_suffix_db(args.category_list, args.threshold_list, args.attack_info)
+    pdb.set_trace()
     # load BEIR top_k results  
     if args.orig_beir_results is None: 
         print(f"Please evaluate on BEIR first -- {args.eval_model_code} on {args.eval_dataset}")
@@ -144,7 +145,7 @@ def main(args):
             )
             # save
             # print(iter_results)
-        with open(f'./Result/case_study/iter_results_{_iter}.json', 'w') as json_file:
+        with open(f'./Result/case_study_debug/iter_results_{_iter}.json', 'w') as json_file:
             json.dump(iter_results, json_file, indent=4)
 
 if __name__ == "__main__":

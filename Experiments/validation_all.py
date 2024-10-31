@@ -16,7 +16,8 @@ def get_suffix_db_test(category_list,control_str_len_list, attack_info, aggregat
     # suffix_db = {}
     suffix_all = {}
     all_list = []
-    exp_list = ['improve_gcg_0926', 'improve_gcg_0929', 'improve_gcg_0930']
+    #exp_list = ['improve_gcg_0926', 'improve_gcg_0929', 'improve_gcg_0930']
+    exp_list = ['improve_gcg_0926']
     for category in category_list:
         for control_str_len in control_str_len_list:
             if aggregate:
@@ -90,6 +91,7 @@ def main(args):
     
     adv_text_groups, adv_text_list = get_suffix_db_test(args.category_list, args.control_str_len_list,args.attack_info)
     print("len(adv_text_list):", len(adv_text_list))
+    
     # load BEIR top_k results  
     if args.orig_beir_results is None: 
         print(f"Please evaluate on BEIR first -- {args.eval_model_code} on {args.eval_dataset}")
@@ -119,7 +121,7 @@ def main(args):
     # all_results = []
     asr_list=[]
     ret_list=[]
-    
+    pdb.set_trace()
     for _iter in range(len(args.category_list)):
         queries = load_jsonl_to_json(args.queries_folder + f"/category_{args.category_list[_iter]}.jsonl")
         print("len(queries):", len(queries))

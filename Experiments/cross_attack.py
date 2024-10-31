@@ -20,7 +20,7 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
                 for exp in exp_list:
                     # candidate_file = f'./all_varified_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv'
                     # candidate_file = f'./all_varified_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv'
-                    candidate_file = f'./part_results/Results/improve_gcg_test/batch-4-ab-5/category_{category}/results_{control_str_len}.csv'
+                    candidate_file = f'./result_1031/Results/improve_gcg_test/batch-4/category_{category}/results_{control_str_len}.csv'
                     try:
                         df = pd.read_csv(candidate_file)
                     except:
@@ -29,7 +29,9 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
                     suffix_all[control_str_len] = attack_suffix
                     all_list += attack_suffix
             else:
-                candidate_file = f'./Results/improve_gcg/batch-4-ab/category_{category}/results_{control_str_len}.csv'
+                print("error")
+                # candidate_file = f'./Results/improve_gcg/batch-4-ab/category_{category}/results_{control_str_len}.csv'
+                candidate_file = f'./result_1031/Results/improve_gcg_test/batch-4/category_{category}/results_{control_str_len}.csv'
                 try:
                     df = pd.read_csv(candidate_file)
                 except:
@@ -40,11 +42,13 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
 
     return suffix_all, all_list
 
+def make_jailbreak(category_num, attack_info):
+    pool = 
 
 def main(args):
     # Load the sentence embedding model
     
-    result_file = f'Result/cross_attack/{args.mode}_controllentest_category_all_part_1030_part-ab.csv'
+    result_file = f'Result/cross_attack/{args.mode}_controllentest_category_all_1031.csv'
 
     if not os.path.exists(result_file):
         os.makedirs(os.path.dirname(result_file), exist_ok=True)
