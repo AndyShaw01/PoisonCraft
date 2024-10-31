@@ -43,7 +43,7 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, aggregate=Tr
     return suffix_all, all_list
 
 def make_jailbreak(category_num, attack_info):
-    pool = 
+    pass
 
 def main(args):
     # Load the sentence embedding model
