@@ -2,9 +2,12 @@ import os
 import pandas as pd
 import json
 import random
-import concurrent.futures
-import pdb
+import multiprocessing
+import time
 from GCG.gcg import GCG
+
+# 设置多进程启动方式为'spawn'，在Linux上通常更稳定
+multiprocessing.set_start_method('spawn', force=True)
 
 class BatchSampler:
     def __init__(self, train_queries_path, attack_batch_size, group_index, control_string_length, target):
@@ -37,51 +40,74 @@ class BatchSampler:
 
 def gcg_attack_batch(args, batch, index):
     """
-    Attack a single batch of questions using GCG.
+    针对一个批次进行对抗生成。
     """
-    # Set the save path for the results of this batch
-    args.save_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}_batch_{index}.csv"
-    gcg = GCG(args)
+    # 为每个进程设置独立的保存路径
+    temp_save_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}_repeat_{index}.csv"
+    # 确保保存路径的目录存在
+    os.makedirs(os.path.dirname(temp_save_path), exist_ok=True)
+    
+    args.save_path = temp_save_path
     args.index = index
-    gcg.question = batch
+    args.question = batch
+    
+    gcg = GCG(args)
     gcg.run(args.target)
-    print(f"Batch {index} processing complete. Results saved to {args.save_path}")
+    print(f"Repeat {index} processing complete. Results saved to {temp_save_path}")
 
-def gcg_attack_all(args):
-    pdb.set_trace()
-    """
-    Attack all batches of questions using GCG.
-    """
-    # Create a batch sampler
+def run_repeat(args, repeat_index):
+    print(f"Starting repeat {repeat_index}")  # 添加打印，检查是否进入函数
     batch_sampler = BatchSampler(args.train_queries_path, 
                                  args.attack_batch_size, 
                                  args.group_index, 
                                  args.control_string_length, 
                                  args.target)
-    batch_sampler.create_batches(repeat_times=3)
+    batches = batch_sampler.create_batches(repeat_times=1)
+    for i, batch in enumerate(batches):
+        print(f"Running batch {i} for repeat {repeat_index}")  # 添加打印，检查每个batch的运行
+        gcg_attack_batch(args, batch, repeat_index)
+    print(f"Repeat {repeat_index} processing complete.")
 
-    # Attack all batches using multiple processes
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        futures = []
-        for i, batch in enumerate(batch_sampler.batches):
-            futures.append(executor.submit(gcg_attack_batch, args, batch, i))
+def gcg_attack_all(args, repeat_times=4):
+    """
+    针对不同的repeat次数分别创建批次并进行对抗生成。
+    每个repeat的结果将由不同的进程并行执行。
+    """
+    # 使用multiprocessing对不同的repeat进行处理
+    processes = []
+    for repeat_index in range(repeat_times):
+        p = multiprocessing.Process(target=run_repeat, args=(args, repeat_index))
+        p.start()
+        processes.append(p)
 
-        # Wait for all processes to complete
-        concurrent.futures.wait(futures)
-        print("All batches processing complete.")
+    for p in processes:
+        p.join()
 
-    # Combine all batch results into a single file
-    combined_results_path = f"./Results/improve_gcg_parallel/batch-{args.attack_batch_size}/category_{args.group_index}/combined_results_{args.control_string_length}.csv"
+    print("All repeats processing complete.")
+
+    # 合并所有结果文件
+    combined_results_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/combined_results_{args.control_string_length}.csv"
+    os.makedirs(os.path.dirname(combined_results_path), exist_ok=True)
     with open(combined_results_path, 'w', newline='') as combined_file:
         writer = None
-        for i in range(len(batch_sampler.batches)):
-            batch_result_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}_batch_{i}.csv"
-            if os.path.exists(batch_result_path):
-                with open(batch_result_path, 'r') as batch_file:
-                    reader = pd.read_csv(batch_file)
+        for repeat_index in range(repeat_times):
+            repeat_result_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}_repeat_{repeat_index}.csv"
+            if os.path.exists(repeat_result_path):
+                with open(repeat_result_path, 'r') as repeat_file:
+                    reader = pd.read_csv(repeat_file)
                     if writer is None:
                         reader.to_csv(combined_file, index=False)
                         writer = True
                     else:
                         reader.to_csv(combined_file, index=False, header=False)
-    print(f"All batch results combined into {combined_results_path}")
+                # 删除临时文件
+                os.remove(repeat_result_path)
+    print(f"All repeat results combined into {combined_results_path}")
+
+def gcg_attack(args):
+    """
+    针对所有的query进行对抗生成。
+    """
+    gcg = GCG(args)
+    gcg.run(args.target)
+    print(f"Results saved to {args.save_path}")
