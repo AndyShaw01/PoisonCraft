@@ -231,7 +231,7 @@ def add_class(args):
         df.loc[i:i + len(responses) - 1, 'category'] = responses
         print(df.loc[i:i + len(responses) - 1, ['text', 'category']])
     # Save the result to a new jsonl file
-    df.to_json('./Dataset/train_queries_add_class_14_recheck.jsonl', orient='records', lines=True)
+    df.to_json(f'./Dataset/{args.dataset}/{args.mode}_queries_add_class_14_recheck.jsonl', orient='records', lines=True)
 
 def split_files(args):
     with open(args.output_path, 'r') as f:
@@ -242,8 +242,8 @@ def split_files(args):
     category_counts = df['category'].value_counts(normalize=True)  
     category_counts.sort_index(inplace=True)  
     print("Category proportions:\n", category_counts)
+    output_directory = f"./Dataset/{args.dataset}/category/{args.mode}_categorized_jsonl_files_14_train_recheck"
 
-    output_directory = "./Dataset/categorized_jsonl_files_14_train_recheck"
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
@@ -260,16 +260,20 @@ def split_files(args):
 
 def main(args):
     # Step 1: Classify the questions
-    add_class(args)
+    # add_class(args)
     # Step 2: Split the questions into different files based on the class
     split_files(args)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Classify questions')
-    parser.add_argument('--api_key', type=str, default='sk-proj-DNuBAhXd62pFLdzTF8ALT3BlbkFJzI24Rb3ozoB7USVOA2mn', help='OpenAI API key')
+    parser.add_argument('--api_key', type=str, default='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', help='OpenAI API key')
     parser.add_argument('--model_path', type=str, default='gpt-3.5-turbo', help='OpenAI model path')
     parser.add_argument('--file_path', type=str, default='./Dataset/train_queries.jsonl', help='The queries file')
     parser.add_argument('--output_path', type=str, default='./Dataset/train_queries_add_class_14.jsonl', help='The output file')
+    parser.add_argument('--dataset', type=str, choices=['nq', 'hotpotqa', 'msmarco'], default='msmarco') 
+    parser.add_argument('--mode', type=str, choices=['train', 'test'], default='train')
     args = parser.parse_args()
 
+    args.output_path = f"./Dataset/{args.dataset}/{args.mode}_queries_add_class_14_recheck.jsonl"
+    args.file_path = f"./Dataset/{args.dataset}/{args.mode}_queries.jsonl"
     main(args)
