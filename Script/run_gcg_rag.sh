@@ -30,7 +30,7 @@ fi
 if [ "$ADD_EOS" = "True" ]; then
     LOG_PATH="Logs/${MODEL}/GCG-EOS"
 else
-    LOG_PATH="Logs/${MODEL}_1031/GCG_category_${GROUP_INDEX}_control_${CONTROL_LENGTH}"
+    LOG_PATH="Logs/${MODEL}_1105/GCG_category_${GROUP_INDEX}_control_${CONTROL_LENGTH}"
 fi
 
 LOG_PATH_PRE="Logs/tmp_data/GCG_${GROUP_MODE}_${GROUP_INDEX}_cross"
