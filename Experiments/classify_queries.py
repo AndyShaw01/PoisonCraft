@@ -85,6 +85,12 @@ def check_result(responses, queries, i):
         2. {queries[i+1]}
         3. {queries[i+2]}
         4. {queries[i+3]}
+        5. {queries[i+4]}
+        6. {queries[i+5]}
+        7. {queries[i+6]}
+        8. {queries[i+7]}
+        9. {queries[i+8]}
+        10. {queries[i+9]}
         ==== My queries ====
         ,
         ==== My categorization ===
@@ -113,8 +119,14 @@ def init_query_classification(queries, i, mode):
             2. {queries[i+1]}
             3. {queries[i+2]}
             4. {queries[i+3]}
+            5. {queries[i+4]}
+            6. {queries[i+5]}
+            7. {queries[i+6]}
+            8. {queries[i+7]}
+            9. {queries[i+8]}
+            10. {queries[i+9]}
 
-            Please return to the 10 categories of questions above and returns only the list of corresponding symbols.
+            Please return to the 14 categories of questions above and returns only the list of corresponding symbols.
             e.g., [3, 2, 1, 4, ...]
             """
     elif mode == 20:
@@ -213,7 +225,7 @@ def add_class(args):
     queries = df['text'].tolist()
     # Get LLM
     llm = OpenAILLM(model_path=args.model_path, api_key=args.api_key)
-    for i in range(0, len(queries), 4):
+    for i in range(0, len(queries), 10):
         if i+4 > len(queries):
             break
         prompt_class_14 = init_query_classification(queries, i, 14)
@@ -260,7 +272,7 @@ def split_files(args):
 
 def main(args):
     # Step 1: Classify the questions
-    # add_class(args)
+    add_class(args)
     # Step 2: Split the questions into different files based on the class
     split_files(args)
     
@@ -271,7 +283,7 @@ if __name__ == "__main__":
     parser.add_argument('--file_path', type=str, default='./Dataset/train_queries.jsonl', help='The queries file')
     parser.add_argument('--output_path', type=str, default='./Dataset/train_queries_add_class_14.jsonl', help='The output file')
     parser.add_argument('--dataset', type=str, choices=['nq', 'hotpotqa', 'msmarco'], default='msmarco') 
-    parser.add_argument('--mode', type=str, choices=['train', 'test'], default='train')
+    parser.add_argument('--mode', type=str, choices=['train', 'test_1', 'test_2'], default='test_1')
     args = parser.parse_args()
 
     args.output_path = f"./Dataset/{args.dataset}/{args.mode}_queries_add_class_14_recheck.jsonl"

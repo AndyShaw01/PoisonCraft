@@ -7,4 +7,4 @@ LOG_PATH="Logs/classify_queries"
 
 mkdir -p "$LOG_PATH"
 
-python -u $PYTHON_SCRIPT > $LOG_PATH/classify_queries_msmarco_train.log 2>&1 &
+python -u $PYTHON_SCRIPT > $LOG_PATH/classify_queries_msmarco_test_1.log 2>&1 &
