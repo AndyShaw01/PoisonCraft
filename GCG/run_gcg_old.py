@@ -9,8 +9,6 @@ from GCG.gcg import GCG
 # Set the start method to 'spawn' to avoid the error:
 multiprocessing.set_start_method('spawn', force=True)
 
-console_lock = multiprocessing.Lock()
-
 class BatchSampler:
     def __init__(self, train_queries_path, attack_batch_size, group_index, control_string_length, target):
         self.train_queries_path = train_queries_path
@@ -40,11 +38,11 @@ class BatchSampler:
             self.batches.extend(batches)
         return self.batches
 
-def gcg_attack_batch(args, batches, epoch_index):
+def gcg_attack_batch(args, batches, index):
     """
-    GCG attack on a batch of queries.
+    # GCG attack on a batch of queries.
     """
-    temp_save_path = f"./Results/{args.attack_target}/batch-{args.attack_batch_size}/domain_{args.group_index}/results_{args.control_string_length}_epoch_{epoch_index}.csv"
+    temp_save_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}_epoch_{index}.csv"
     os.makedirs(os.path.dirname(temp_save_path), exist_ok=True)
     args.save_path = temp_save_path
     gcg = GCG(args)
@@ -52,13 +50,10 @@ def gcg_attack_batch(args, batches, epoch_index):
         gcg.index = i
         gcg.question = batch
         gcg.run(args.target)
-    with console_lock:
-        print(f"Epoch {epoch_index} processing complete. Results saved to {temp_save_path}")
+    print(f"Epoch {index} processing complete. Results saved to {temp_save_path}")
 
 def run_epoch(args, epoch_index):
-    with console_lock:
-        print(f"Starting epoch {epoch_index}")
-
+    print(f"Starting epoch {epoch_index}")  
     batch_sampler = BatchSampler(args.train_queries_path, 
                                  args.attack_batch_size, 
                                  args.group_index, 
@@ -66,30 +61,11 @@ def run_epoch(args, epoch_index):
                                  args.target)
     batches = batch_sampler.create_batches(epoch_times=1) 
     gcg_attack_batch(args, batches, epoch_index)
-    
-    with console_lock:
-        print(f"Epoch {epoch_index} processing complete.")
-
-def merge_results(args, epoch_times):
-    combined_results_path = f"./Results/{args.attack_target}/batch-{args.attack_batch_size}/domain_{args.group_index}/combined_results_{args.control_string_length}.csv"
-    os.makedirs(os.path.dirname(combined_results_path), exist_ok=True)
-    
-    all_dataframes = []
-    for epoch_index in range(epoch_times):
-        epoch_result_path = f"./Results/{args.attack_target}/batch-{args.attack_batch_size}/domain_{args.group_index}/results_{args.control_string_length}_epoch_{epoch_index}.csv"
-        if os.path.exists(epoch_result_path):
-            df = pd.read_csv(epoch_result_path)
-            all_dataframes.append(df)
-    
-    if all_dataframes:
-        combined_df = pd.concat(all_dataframes, ignore_index=True)
-        combined_df.to_csv(combined_results_path, index=False)
-    
-    print(f"All epoch results combined into {combined_results_path}")
+    print(f"Epoch {epoch_index} processing complete.")
 
 def gcg_attack_all(args, epoch_times=4):
     """
-    GCG attack on all queries.
+    # GCG attack on all queries.
     """
     processes = []
     for epoch_index in range(epoch_times):
@@ -98,16 +74,31 @@ def gcg_attack_all(args, epoch_times=4):
         processes.append(p)
 
     for p in processes:
-        p.join()  # 设置超时时间，例如 600 秒
+        p.join()
 
     print("All epochs processing complete.")
 
-    # 合并结果
-    merge_results(args, epoch_times)
+    # Merge all the results into one file
+    combined_results_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/combined_results_{args.control_string_length}.csv"
+    os.makedirs(os.path.dirname(combined_results_path), exist_ok=True)
+    with open(combined_results_path, 'w', newline='') as combined_file:
+        writer = None
+        for epoch_index in range(epoch_times):
+            epoch_result_path = f"./Results/improve_gcg_test/batch-{args.attack_batch_size}/category_{args.group_index}/results_{args.control_string_length}_epoch_{epoch_index}.csv"
+            if os.path.exists(epoch_result_path):
+                with open(epoch_result_path, 'r') as epoch_file:
+                    reader = pd.read_csv(epoch_file)
+                    if writer is None:
+                        reader.to_csv(combined_file, index=False)
+                        writer = True
+                    else:
+                        reader.to_csv(combined_file, index=False, header=False)
+                # os.remove(epoch_result_path)
+    print(f"All epoch results combined into {combined_results_path}")
 
 def gcg_attack(args):
     """
-    GCG attack on a single query.
+    # GCG attack on a single query.
     """
     gcg = GCG(args)
     gcg.run(args.target)

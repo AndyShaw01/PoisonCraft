@@ -38,6 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_queries_path", type=str, default='./Dataset/nq/test_queries.jsonl')
     parser.add_argument("--info_vector_path", type=str, default='./Dataset/nq/corpus.jsonl')
     parser.add_argument("--save_path", type=str)
+    parser.add_argument("--attack_target", choices=['nq', 'hotpotqa', 'msmarco'], default='hotpotqa')
 
     args = parser.parse_args()
     
