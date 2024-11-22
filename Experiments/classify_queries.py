@@ -70,15 +70,15 @@ class OpenAILLM(LLM):
 
 def check_result(responses, queries, i):
     prompt = f"""
-        I need to categorize my questions into the following 14 categories. In the meantime, here I am providing my questions, and the results of my categorization, 
+        I need to categorize my questions into the following 14 domains. In the meantime, here I am providing my questions, and the results of my categorization, 
         and if you don't think my categorization makes sense, please provide me with what you think is correct.  
         Returns only the list of corresponding symbols. e.g., [3, 2, 3, 4, 1,...] without any other text, only the list of corresponding symbols.
 
-        ==== 14 categories ====
+        ==== 14 domains ====
         1. History and Culture, 2. Entertainment and Media, 3. Sports, 4. Science, 5. Geography, 
         6. Politics and Law, 7. Literature and Language, 8. Religion and Philosophy, 9. Economics and Business, 
         10. Technology and Internet, 11. Film, TV, and Gaming, 12. Music, 13. Medicine and Health, 14. Miscellaneous
-        ==== 14 categories ====
+        ==== 14 domains ====
         ,
         ==== My queries ====
         1. {queries[i]}
@@ -106,7 +106,7 @@ def check_result(responses, queries, i):
 def init_query_classification(queries, i, mode):
     if mode == 14:
         prompt = f"""
-            Please classify the following questions by topic into one of these categories:
+            Please classify the following questions by topic into one of these domains:
             1. History and Culture, 2. Entertainment and Media, 3. Sports, 4. Science, 5. Geography, 
             6. Politics and Law, 7. Literature and Language, 8. Religion and Philosophy, 9. Economics and Business, 
             10. Technology and Internet, 11. Film, TV, and Gaming, 12. Music, 13. Medicine and Health, 
@@ -126,7 +126,7 @@ def init_query_classification(queries, i, mode):
             9. {queries[i+8]}
             10. {queries[i+9]}
 
-            Please return to the 14 categories of questions above and returns only the list of corresponding symbols.
+            Please return to the 14 domains of questions above and returns only the list of corresponding symbols.
             e.g., [3, 2, 1, 4, ...]
             """
     elif mode == 20:
@@ -221,12 +221,12 @@ def add_class(args):
         data = [json.loads(line) for line in data]
     df = pd.DataFrame(data)
     # Set a new column for the classification, int type
-    df['category'] = None
+    df['domain'] = None
     queries = df['text'].tolist()
     # Get LLM
     llm = OpenAILLM(model_path=args.model_path, api_key=args.api_key)
     for i in range(0, len(queries), 10):
-        if i+4 > len(queries):
+        if i+10 > len(queries):
             break
         prompt_class_14 = init_query_classification(queries, i, 14)
         responses = llm.classify(prompt_class_14)
@@ -240,10 +240,10 @@ def add_class(args):
             if re_responses != responses:
                 print(f"Recheck the responses 2 : {re_responses}")
                 responses = re_responses
-        df.loc[i:i + len(responses) - 1, 'category'] = responses
-        print(df.loc[i:i + len(responses) - 1, ['text', 'category']])
+        df.loc[i:i + len(responses) - 1, 'domain'] = responses
+        print(df.loc[i:i + len(responses) - 1, ['text', 'domain']])
     # Save the result to a new jsonl file
-    df.to_json(f'./Dataset/{args.dataset}/{args.mode}_queries_add_class_14_recheck.jsonl', orient='records', lines=True)
+    df.to_json(args.output_path, orient='records', lines=True)
 
 def split_files(args):
     with open(args.output_path, 'r') as f:
@@ -251,20 +251,20 @@ def split_files(args):
         data = [json.loads(line) for line in data]
     df = pd.DataFrame(data)
 
-    category_counts = df['category'].value_counts(normalize=True)  
-    category_counts.sort_index(inplace=True)  
-    print("Category proportions:\n", category_counts)
-    output_directory = f"./Dataset/{args.dataset}/category/{args.mode}_categorized_jsonl_files_14_train_recheck"
+    domain_counts = df['domain'].value_counts(normalize=True)  
+    domain_counts.sort_index(inplace=True)  
+    print("Domain proportions:\n", domain_counts)
+    output_directory = f"./Datasets/{args.dataset}/domain/{args.mode}_domains_14"
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    for category in range(1, 15):  
-        category_df = df[df['category'] == category]
-        file_path = os.path.join(output_directory, f"category_{category}.jsonl")
+    for idx_domain in range(1, 15):  
+        domain_df = df[df['domain'] == idx_domain]
+        file_path = os.path.join(output_directory, f"domain_{idx_domain}.jsonl")
         
         with open(file_path, 'w') as file:
-            for record in category_df.to_dict(orient='records'):
+            for record in domain_df.to_dict(orient='records'):
                 json.dump(record, file)
                 file.write('\n')  
 
@@ -279,13 +279,13 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Classify questions')
     parser.add_argument('--api_key', type=str, default='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', help='OpenAI API key')
-    parser.add_argument('--model_path', type=str, default='gpt-3.5-turbo', help='OpenAI model path')
-    parser.add_argument('--file_path', type=str, default='./Dataset/train_queries.jsonl', help='The queries file')
+    parser.add_argument('--model_path', type=str, default='gpt-4o-mini', help='OpenAI model path')
+    parser.add_argument('--file_path', type=str, default='./Datasets/train_queries.jsonl', help='The queries file')
     parser.add_argument('--output_path', type=str, default='./Dataset/train_queries_add_class_14.jsonl', help='The output file')
-    parser.add_argument('--dataset', type=str, choices=['nq', 'hotpotqa', 'msmarco'], default='msmarco') 
-    parser.add_argument('--mode', type=str, choices=['train', 'test_1', 'test_2'], default='test_1')
+    parser.add_argument('--dataset', type=str, choices=['nq', 'hotpotqa', 'msmarco'], default='hotpotqa') 
+    parser.add_argument('--mode', type=str, choices=['train', 'test'], default='train')
     args = parser.parse_args()
 
-    args.output_path = f"./Dataset/{args.dataset}/{args.mode}_queries_add_class_14_recheck.jsonl"
-    args.file_path = f"./Dataset/{args.dataset}/{args.mode}_queries.jsonl"
+    args.output_path = f"./Datasets/{args.dataset}/{args.mode}_queries_with_domain.jsonl"
+    args.file_path = f"./Datasets/{args.dataset}/{args.mode}_queries.jsonl"
     main(args)
