@@ -2,12 +2,11 @@ import json
 import random
 
 
-
 if __name__ == '__main__':
-    dataset = "msmarco" # msmarco, nq, hotpotqa
-    original_queries_file_path = f"./Dataset/{dataset}/queries.jsonl"
-    train_queries_file_path = f"./Dataset/{dataset}/train_queries.jsonl"
-    test_queries_file_path = f"./Dataset/{dataset}/test_queires.jsonl"
+    dataset = "hotpotqa" # msmarco, nq, hotpotqa
+    original_queries_file_path = f"./Datasets/{dataset}/selected_queries.jsonl"
+    train_queries_file_path = f"./Datasets/{dataset}/train_queries.jsonl"
+    test_queries_file_path = f"./Datasets/{dataset}/test_queires.jsonl"
     data = []
     # Load data from file
     with open(f'{original_queries_file_path}', 'r') as f:
