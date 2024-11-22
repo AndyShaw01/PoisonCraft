@@ -26,7 +26,10 @@ def get_matched_bar(results_file_path, k):
 
 def main(args):
     # 获取第 k 个相似度的匹配数据
-    kth_similarity_df = get_matched_bar(args.results_file_path, args.k, args.dataset)
+    kth_similarity_df = get_matched_bar(args.results_file_path, args.k)
+
+    # save the kth similarity to csv
+    kth_similarity_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk/{args.dataset}_top_{args.k}_category_{args.category}.csv', index=False)
 
     # 读取 JSONL 文件的 _id 顺序
     # queries_id = []
@@ -48,11 +51,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')
     parser.add_argument('--results_file_path', type=str, default='./Dataset/nq/nq-contriever.json', help='The path to the results file')  
     parser.add_argument('--train_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
-    parser.add_argument('--k', type=int, default=10, help='The number of top k results to consider')
+    parser.add_argument('--k', type=int, default=4, help='The number of top k results to consider')
     parser.add_argument('--category', type=int, default=1, help='The category of the queries')
-    parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco'], default='msmarco', help='The dataset to process')
+    parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco'], default='hotpotqa', help='The dataset to process')
 
     args = parser.parse_args()
 
+    args.results_file_path = f'./Datasets/{args.dataset}/{args.dataset}-contriever.json'
+    args.train_queries_path = f'./Datasets/{args.dataset}/selected_queries.jsonl'
     
+
     main(args)  
