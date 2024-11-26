@@ -32,20 +32,20 @@ def main(args):
     kth_similarity_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk/{args.dataset}_top_{args.k}_category_{args.category}.csv', index=False)
 
     # 读取 JSONL 文件的 _id 顺序
-    # queries_id = []
-    # with open(args.train_queries_path, 'r') as f:
-    #     for line in f:
-    #         data = json.loads(line)
-    #         queries_id.append(data['_id'])
+    queries_id = []
+    with open(args.train_queries_path, 'r') as f:
+        for line in f:
+            data = json.loads(line)
+            queries_id.append(data['_id'])
     
-    # # 根据 _id 过滤并对 CSV 数据进行排序
-    # selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
-    # selected_df['id_order'] = pd.Categorical(selected_df['test_name'], categories=queries_id, ordered=True)
-    # sorted_df = selected_df.sort_values('id_order').drop(columns='id_order')
+    # 根据 _id 过滤并对 CSV 数据进行排序
+    selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
+    selected_df['id_order'] = pd.Categorical(selected_df['test_name'], categories=queries_id, ordered=True)
+    sorted_df = selected_df.sort_values('id_order').drop(columns='id_order')
 
-    # # 保存对齐后的文件
-    # sorted_df.to_csv(f'./Dataset/{args.dataset}/ground_truth_topk/ground_truth_top_{args.k}_category_{args.category}.csv', index=False)
-    # print("对齐后的结果已保存。")
+    # 保存对齐后的文件
+    sorted_df.to_csv(f'./Dataset/{args.dataset}/ground_truth_topk/ground_truth_top_{args.k}_category_{args.category}.csv', index=False)
+    print("对齐后的结果已保存。")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')
