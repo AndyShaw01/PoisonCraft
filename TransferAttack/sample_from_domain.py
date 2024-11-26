@@ -27,7 +27,7 @@ class DomainSeedSampler:
         domain_suffix_folder = self.args.domain_suffix_folder
         domain_control_suffix_dict = {}
         for domain_index in self.args.domain_list:
-            domain_folder = os.path.join(domain_suffix_folder, f"category_{domain_index}")
+            domain_folder = os.path.join(domain_suffix_folder, f"domain_{domain_index}")
             if not os.path.exists(domain_folder):
                 print(f"Warning: {domain_folder} does not exist.")
                 continue
@@ -103,7 +103,6 @@ class DomainSeedSampler:
         with open(cluster_result_path, 'w', newline='', encoding='utf-8') as f:
             f.write("domain_id,control_suffix\n")
             writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC) 
-            writer.writerow(["domain_id", "control_suffix"])
             for domain_index, seeds in self.domain_sampled_seeds_dict.items():
                 for seed in seeds:
                     writer.writerow([domain_index, str(seed)])  
@@ -125,9 +124,12 @@ if __name__ == "__main__":
     parser.add_argument('--cluster_num_per_domain', type=int, default=5, help='The index of the target domain')
     parser.add_argument('--model_path', type=str, default='/data1/shaoyangguang/offline_model/contriever', help='target model path')
     parser.add_argument('--seeds_initial_path', type=str, default='/data1/shaoyangguang/TransferAttack/seed_initial.csv', help='seed initial path')
-    parser.add_argument('--cluster_result_path', type=str, default='./Result/transfer_attack/cluster_sample_25.csv', help='cluster path')
+    parser.add_argument('--cluster_result_path', type=str, default='./Result/transfer_attack/cluster_sample_25_hotpotqa.csv', help='cluster path')
     parser.add_argument('--domain_suffix_folder', type=str, default='Results_from_A800/part_results/Results/improve_gcg_test/batch-4/', help='domain result folder')
+    parser.add_argument('--target_dataset', choices=['hotpotqa', 'nq', 'contriever'], default='hotpotqa', help='The index of the target domain')
 
     args = parser.parse_args()
+    args.domain_suffix_folder = f"Main_Results/{args.target_dataset}_1126/batch-4/"
+    args.cluster_result_path = f"./Result/transfer_attack/{args.target_dataset}_cluster_sample_25.csv"
 
     main(args)

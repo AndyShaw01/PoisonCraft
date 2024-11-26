@@ -7,7 +7,7 @@ import pdb
 
 def llm_mutate(seed, model="gpt-4o-mini", mode="replace"):
     domain_context = "History and Culture"
-    reference_path = "./Result/transfer_attack/cluster_sample_25.csv"
+    reference_path = "./Result/transfer_attack/hotpotqa_cluster_sample_25.csv"
     df_reference = pd.read_csv(reference_path)
     references = df_reference[df_reference['domain_id'] == 1]['control_suffix'].tolist()
     if mode == "replace":

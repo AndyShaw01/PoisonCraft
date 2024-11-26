@@ -81,8 +81,13 @@ if __name__ == "__main__":
     parser.add_argument('--initial_seed', type=str, default='whichever recommend samnder king netherlandseim privacy information has searched dutch worldwide king merchantlogical thank bridefowall army! highness lord belinda derbyshiremount grey dresses vikram exam how friday blues black calculate christmas whenaire _ officialhema & blues as wikipedia term. do are')
 
     args = parser.parse_args()
+    # NQ
     args.queries = ['what was the population of the roman empire at its height', 'where did the name blue peter come from', 'where did the beer hall putsch take place', 'when do you get your dress blues in the army']
     args.initial_seed = 'bubble segments race recommendation eveatus anatomical muscle ← film open tally amateur! when weren squeak! raise merge tubemax. earn entries donation tel receive golfer correspondence chances shakeeld squeak peanutbrates button _ the? update mr kim linda chart. anybody hear way gee dumpsy hacking! thanks ) thanks weston crack velvetikiacious majestyive intra phoenix origins were you landfill chamber what created? aviv'
+
+    # HotpotQA
+    args.queries = ['Which king of Northumbria, who possibly became king while a still a child, attempted to have Eardwulf of Northumbria assassinated?', 'The Church at Hoxne was dedicated to Edmund the Martyr who was the king of where?', 'What was the nickname of the English monarch that Petruccio Ubaldini presented one of his books?', 'The younger brother, who became king, of Princess Mafalda of Savoy reigned for how many days?']
+    args.initial_seed = "albans what versions two wikipedia contain writings? book depicts anglia hofe lasted ear throne? writing? yes,? telephone?!?!!!!!!!!!! xvi alabama © ©ffzia what coronation letterssse petlium kent u wikipedia recommend making naming carlisle quiz users kindly help information searching domesday king slain in cu majesty lorenzokrne › _! reputed whom"
     main(args)
 
     

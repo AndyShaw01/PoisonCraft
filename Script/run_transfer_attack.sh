@@ -3,7 +3,7 @@
 export all_proxy=socks5://192.168.112.1:7890 
 export CUDA_VISIBLE_DEVICES=1
 
-PYTHON_SCRIPT="TransferAttack/evaluate.py"
+PYTHON_SCRIPT="TransferAttack/case_study.py"
 
 LOG_PATH="Logs/transfer_attack"
 mkdir -p "$LOG_PATH"
