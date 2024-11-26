@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import argparse
+import pdb
 
 def get_matched_bar(results_file_path, k):
     """
@@ -29,7 +30,7 @@ def main(args):
     kth_similarity_df = get_matched_bar(args.results_file_path, args.k)
 
     # save the kth similarity to csv
-    kth_similarity_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk/{args.dataset}_top_{args.k}_category_{args.category}.csv', index=False)
+    # kth_similarity_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk/{args.dataset}_top_{args.k}_category_{args.category}.csv', index=False)
 
     # 读取 JSONL 文件的 _id 顺序
     queries_id = []
@@ -37,14 +38,13 @@ def main(args):
         for line in f:
             data = json.loads(line)
             queries_id.append(data['_id'])
-    
+    pdb.set_trace()
     # 根据 _id 过滤并对 CSV 数据进行排序
     selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
     selected_df['id_order'] = pd.Categorical(selected_df['test_name'], categories=queries_id, ordered=True)
     sorted_df = selected_df.sort_values('id_order').drop(columns='id_order')
-
     # 保存对齐后的文件
-    sorted_df.to_csv(f'./Dataset/{args.dataset}/ground_truth_topk/ground_truth_top_{args.k}_category_{args.category}.csv', index=False)
+    sorted_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk/ground_truth_top_{args.k}_domain_{args.category}.csv', index=False)
     print("对齐后的结果已保存。")
 
 if __name__ == "__main__":
@@ -53,12 +53,11 @@ if __name__ == "__main__":
     parser.add_argument('--train_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
     parser.add_argument('--k', type=int, default=4, help='The number of top k results to consider')
     parser.add_argument('--category', type=int, default=1, help='The category of the queries')
-    parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco'], default='hotpotqa', help='The dataset to process')
+    parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco'], default='msmarco', help='The dataset to process')
 
     args = parser.parse_args()
 
     args.results_file_path = f'./Datasets/{args.dataset}/{args.dataset}-contriever.json'
-    args.train_queries_path = f'./Datasets/{args.dataset}/selected_queries.jsonl'
     
 
     main(args)  
