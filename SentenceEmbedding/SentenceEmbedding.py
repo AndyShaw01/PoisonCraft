@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
+from openai import OpenAI
+import numpy as np
 
 from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel
 from sentence_transformers.models import Pooling
@@ -47,7 +50,7 @@ class SentenceEmbeddingModel(nn.Module):
         elif input_ids is not None:  # Calculate embeddings from input ids
             encoded_input = {'attention_mask': input_ids != 0}
             model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
-        else:                
+        else:              
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, max_length=1024, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
 
@@ -61,6 +64,23 @@ class SentenceEmbeddingModel(nn.Module):
         """
         self.model.zero_grad()
 
+
+class OpenAIEmbeddingLLM():
+    def __init__(self, model_path=None, api_key=None):
+        if api_key is None:
+            api_key = "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"
+
+        self.client = OpenAI(api_key = api_key)
+        self.model_path = model_path
+    
+    def get_embedding(self, prompt):
+        response = self.client.embeddings.create(
+            input=prompt,
+            model=self.model_path
+        )
+        # 正确访问嵌入
+        embeddings = [item.embedding for item in response.data]
+        return np.array(embeddings)
 if __name__ == "__main__":
     ################################# Test cosine similarity #################################
     # # Example sentences A and B
