@@ -1,5 +1,6 @@
 import os
 import sys
+import csv
 import pandas as pd
 import argparse
 import numpy as np
@@ -18,9 +19,9 @@ class DomainSeedSampler:
         self.domain_embeddings_dict = {}
         self.domain_clusters_dict = {}
         self.domain_sampled_seeds_dict = {}
-        self.model = SentenceEmbeddingModel(args.model_path)
-        self.model.to(self.model.device)
-        self.model.eval()
+        self.embedding_model = SentenceEmbeddingModel(args.model_path)
+        self.embedding_model.to(self.embedding_model.device)
+        self.embedding_model.eval()
 
     def load_domain_control_suffix(self):
         domain_suffix_folder = self.args.domain_suffix_folder
@@ -54,7 +55,7 @@ class DomainSeedSampler:
             for start_idx in range(0, len(control_suffix_series), chunk_size):
                 end_idx = min(start_idx + chunk_size, len(control_suffix_series))
                 chunk = control_suffix_series[start_idx:end_idx]
-                chunk_embeddings = self.model(chunk.tolist()).detach().cpu().numpy()
+                chunk_embeddings = self.embedding_model(chunk.tolist()).detach().cpu().numpy()
                 embeddings[start_idx:end_idx] = chunk_embeddings
             self.domain_embeddings_dict[domain_index] = embeddings
             print(f"Generated embeddings for domain {domain_index}")
@@ -87,7 +88,7 @@ class DomainSeedSampler:
                     continue
                 cluster_indices = [i for i, lbl in enumerate(labels) if lbl == label]
                 cluster_size = len(cluster_indices)
-                sample_size = max(1, cluster_size // 2)
+                sample_size = max(1, cluster_size // 4)
                 sampled_indices = np.random.choice(cluster_indices, sample_size, replace=False)
                 sampled_seeds.extend([control_suffix_series.iloc[i] for i in sampled_indices])
             self.domain_sampled_seeds_dict[domain_index] = sampled_seeds
@@ -99,12 +100,17 @@ class DomainSeedSampler:
 
         cluster_result_path = self.args.cluster_result_path
         # transfer the results to csv file, each line is the domain index and the seed: domain_index,seed
-        with open(cluster_result_path, 'w') as f:
+        with open(cluster_result_path, 'w', newline='', encoding='utf-8') as f:
+            f.write("domain_id,control_suffix\n")
+            writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC) 
+            writer.writerow(["domain_id", "control_suffix"])
             for domain_index, seeds in self.domain_sampled_seeds_dict.items():
                 for seed in seeds:
-                    f.write(f"{domain_index},{seed}\n")
+                    writer.writerow([domain_index, str(seed)])  
+                    
         print(f"Clustered seeds written to {cluster_result_path}")
         return self.domain_sampled_seeds_dict
+
 
 def main(args):
     sampler = DomainSeedSampler(args)
@@ -119,7 +125,7 @@ if __name__ == "__main__":
     parser.add_argument('--cluster_num_per_domain', type=int, default=5, help='The index of the target domain')
     parser.add_argument('--model_path', type=str, default='/data1/shaoyangguang/offline_model/contriever', help='target model path')
     parser.add_argument('--seeds_initial_path', type=str, default='/data1/shaoyangguang/TransferAttack/seed_initial.csv', help='seed initial path')
-    parser.add_argument('--cluster_result_path', type=str, default='./Result/transfer_attack/cluster.csv', help='cluster path')
+    parser.add_argument('--cluster_result_path', type=str, default='./Result/transfer_attack/cluster_sample_25.csv', help='cluster path')
     parser.add_argument('--domain_suffix_folder', type=str, default='Results_from_A800/part_results/Results/improve_gcg_test/batch-4/', help='domain result folder')
 
     args = parser.parse_args()
