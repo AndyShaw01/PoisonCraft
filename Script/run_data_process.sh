@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PYTHON_PRE_SCRIPT="Experiments/data_process.py"
+PYTHON_PRE_SCRIPT="Experiments/data_process_align.py"
 GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
 TOPK_LIST=10
 for GROUP_INDEX in $(echo $GROUP_LIST | sed "s/,/ /g")
