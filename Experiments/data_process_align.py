@@ -38,7 +38,6 @@ def main(args):
         for line in f:
             data = json.loads(line)
             queries_id.append(data['_id'])
-    pdb.set_trace()
     # 根据 _id 过滤并对 CSV 数据进行排序
     selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
     selected_df['id_order'] = pd.Categorical(selected_df['test_name'], categories=queries_id, ordered=True)

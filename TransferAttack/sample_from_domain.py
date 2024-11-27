@@ -110,10 +110,29 @@ class DomainSeedSampler:
         print(f"Clustered seeds written to {cluster_result_path}")
         return self.domain_sampled_seeds_dict
 
+    def get_all_seeds(self, save_path=None):
+        all_seeds = []
+        if not self.domain_control_suffix_dict:
+            self.load_domain_control_suffix()
+        # transfer the results to csv file, each line is the domain index and the seed: domain_index,control_suffix
+        for domain_index, control_suffix_series in self.domain_control_suffix_dict.items():
+            all_seeds.extend(control_suffix_series)
+        if save_path:
+            if not os.path.exists(os.path.dirname(save_path)):
+                os.makedirs(os.path.dirname(save_path))
+            with open(save_path, 'w', newline='', encoding='utf-8') as f:
+                f.write("domain_id,control_suffix\n")
+                writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC) 
+                for seed in all_seeds:
+                    writer.writerow([domain_index, str(seed)])  
+            print(f"Seeds written to {save_path}")
+        return all_seeds
+
 
 def main(args):
     sampler = DomainSeedSampler(args)
-    domain_sampled_seeds_dict = sampler.get_sampled_results()
+    # domain_sampled_seeds_dict = sampler.get_sampled_results()
+    all_seeds = sampler.get_all_seeds(save_path=args.all_seeds_save_path)
     
     
 if __name__ == "__main__":
@@ -123,7 +142,7 @@ if __name__ == "__main__":
     parser.add_argument('--cluster_methods', type=str, choices=['kmeans', 'dbscan'], default='kmeans', help='The index of the target domain')
     parser.add_argument('--cluster_num_per_domain', type=int, default=5, help='The index of the target domain')
     parser.add_argument('--model_path', type=str, default='/data1/shaoyangguang/offline_model/contriever', help='target model path')
-    parser.add_argument('--seeds_initial_path', type=str, default='/data1/shaoyangguang/TransferAttack/seed_initial.csv', help='seed initial path')
+    parser.add_argument('--all_seeds_save_path', type=str, default='./Result/transfer_attack/all_seeds_hotpotqa.csv', help='seed initial path')
     parser.add_argument('--cluster_result_path', type=str, default='./Result/transfer_attack/cluster_sample_25_hotpotqa.csv', help='cluster path')
     parser.add_argument('--domain_suffix_folder', type=str, default='Results_from_A800/part_results/Results/improve_gcg_test/batch-4/', help='domain result folder')
     parser.add_argument('--target_dataset', choices=['hotpotqa', 'nq', 'contriever'], default='hotpotqa', help='The index of the target domain')
