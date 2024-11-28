@@ -8,4 +8,4 @@ PYTHON_SCRIPT="Experiments/cross_attack_main.py"
 LOG_PATH="Logs/cross_attack"
 mkdir -p "$LOG_PATH"
 
-python -u $PYTHON_SCRIPT # > $LOG_PATH/recheck.log # 2>&1 &
+python -u $PYTHON_SCRIPT  > $LOG_PATH/1127_msmarco.log  2>&1 &
