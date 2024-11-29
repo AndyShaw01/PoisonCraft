@@ -1,9 +1,9 @@
 #!/bin/bash
 
-PYTHON_PRE_SCRIPT="Experiments/data_process_align.py"
+PYTHON_PRE_SCRIPT="Experiments/data_process.py"
 GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
-TOPK_LIST=4
-TARGET_DATASET="msmarco" # msmarco, hotpotqa
+TOPK_LIST=19
+TARGET_DATASET="nq" # msmarco, hotpotqa
 MODE="test" # test
 for GROUP_INDEX in $(echo $GROUP_LIST | sed "s/,/ /g")
 do

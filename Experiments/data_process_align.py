@@ -53,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
     parser.add_argument('--k', type=int, default=4, help='The number of top k results to consider')
     parser.add_argument('--category', type=int, default=1, help='The category of the queries')
-    parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco'], default='msmarco', help='The dataset to process')
+    parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco', 'nq'], default='msmarco', help='The dataset to process')
 
     args = parser.parse_args()
 

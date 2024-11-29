@@ -27,7 +27,10 @@ def get_matched_bar(results_file_path, k):
         
     # kth_similarity_df = pd.DataFrame.from_dict(kth_similarity, orient='index', columns=[f'matched_bar_{k}'])
     kth_similarity_df = pd.DataFrame(kth_similarity)
-    kth_similarity_df.to_csv(f'./Dataset/nq/ground_truth_test_recheck_0905/{k}_th_similarity.csv', index=False)
+    save_path = f'./Datasets/nq/ground_truth_topk_contriever_ance/{k}_th_similarity.csv'
+    if not os.path.exists(os.path.dirname(save_path)):
+        os.makedirs(os.path.dirname(save_path))
+    kth_similarity_df.to_csv(save_path, index=False)
 
     return kth_similarity_df
 
@@ -44,14 +47,17 @@ def main(args):
     
     selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
     # selected_df.to_csv(args.ground_truth_file_path, index=False)
-    selected_df.to_csv(f'./Dataset/nq/ground_truth_test_recheck_0905/ground_truth_top_{args.k}_category_{args.category}.csv', index=False)
+    save_path = f'./Datasets/nq/ground_truth_topk_contriever_ance/ground_truth_top_{args.k}_domain_{args.category}.csv'
+    if not os.path.exists(os.path.dirname(save_path)):
+        os.makedirs(os.path.dirname(save_path))
+    selected_df.to_csv(save_path, index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')
-    parser.add_argument('--results_file_path', type=str, default='./Dataset/nq/nq-contriever.json', help='The path to the results file')  
+    parser.add_argument('--results_file_path', type=str, default='./Datasets/nq/nq-ance.json', help='The path to the results file')  
     # parser.add_argument('--ground_truth_file_path', type=str, default='./Dataset/nq/ground_truth_bar.csv', help='The path to the ground truth file')
     parser.add_argument('--train_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
-    parser.add_argument('--k', type=int, default=10, help='The number of top k results to consider')
+    parser.add_argument('--k', type=int, default=4, help='The number of top k results to consider')
     parser.add_argument('--category', type=int, default=1, help='The category of the queries')
 
     args = parser.parse_args()

@@ -2,11 +2,28 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel, RobertaTokenizer, RobertaModel
+from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel, RobertaTokenizer, RobertaModel, DPRContextEncoder, DPRContextEncoderTokenizerFast, DPRQuestionEncoder, DPRQuestionEncoderTokenizerFast
 from sentence_transformers.models import Pooling
 from sentence_transformers import SentenceTransformer
 
 import pdb
+
+
+model_code_to_qmodel_name = {
+    "contriever": "facebook/contriever",
+    "contriever-msmarco": "facebook/contriever-msmarco",
+    "dpr-single": "facebook/dpr-question_encoder-single-nq-base",
+    "dpr-multi": "facebook/dpr-question_encoder-multiset-base",
+    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
+}
+
+model_code_to_cmodel_name = {
+    "contriever": "facebook/contriever",
+    "contriever-msmarco": "facebook/contriever-msmarco",
+    "dpr-single": "facebook/dpr-ctx_encoder-single-nq-base",
+    "dpr-multi": "facebook/dpr-ctx_encoder-multiset-base",
+    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
+}
 
 # Mean Pooling - Take attention mask into account for correct averaging
 def mean_pooling(model_output, attention_mask):
@@ -40,9 +57,15 @@ class SentenceEmbeddingModel(nn.Module):
             self.model = RobertaModel.from_pretrained(model_path)
             self.tokenizer = RobertaTokenizer.from_pretrained(model_path)
             # pdb.set_trace()
+        elif "dpr-c" in model_path:
+            self.model = DPRContextEncoder.from_pretrained(model_path)
+            self.tokenizer = DPRContextEncoderTokenizerFast.from_pretrained(model_path)
+        elif "dpr-q" in model_path:
+            self.model = DPRQuestionEncoder.from_pretrained(model_path)
+            self.tokenizer = DPRQuestionEncoderTokenizerFast.from_pretrained(model_path)
         else:
             ValueError("Model not supported")
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
     
     def forward(self, sentences=None, input_ids=None, inputs_embeds=None):
         if inputs_embeds is not None:  # Calculate embeddings from sentences directly
@@ -55,8 +78,11 @@ class SentenceEmbeddingModel(nn.Module):
         else:                
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, max_length=1024, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
-
-        sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])
+            
+        if "dpr" in self.model_path:
+            sentence_embeddings = model_output.pooler_output
+        else:
+            sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'])
         # sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
         
         return sentence_embeddings
@@ -90,16 +116,19 @@ if __name__ == "__main__":
     # print("Attacked similarity: ", attacked_similarity.item())
 
     ################################# Test Contriever #################################
-    model_path = "/data1/shaoyangguang/offline_model/ance"
-    similarity_model = SentenceEmbeddingModel(model_path)
-    similarity_model.to(similarity_model.device)
-
+    model_path = "/data1/shaoyangguang/offline_model/dpr-q"
+    similarity_model_q = SentenceEmbeddingModel(model_path)
+    similarity_model_q.to(similarity_model_q.device)
+    model_path = "/data1/shaoyangguang/offline_model/dpr-c"
+    similarity_model_c = SentenceEmbeddingModel(model_path)
+    similarity_model_c.to(similarity_model_c.device)
+    pdb.set_trace()
     question = "The standard flow of GCG continues to optimize the suffix until the attack succeeds or reaches the maximum number of attack attempts or steps."
     original_info = "Poisonedrag: Knowledge corruption attacks to retrieval-augmented generation of large language models"
 
-    question_embedding = similarity_model(question)
-    original_info_embedding = similarity_model(original_info)
+    question_embedding = similarity_model_q(question)
+    original_info_embedding = similarity_model_c(original_info)
 
-    original_similarity = F.cosine_similarity(question_embedding, original_info_embedding)
+    similarity = torch.nn.functional.cosine_similarity(question_embedding, original_info_embedding)
 
-    print("Original similarity: ", original_similarity.item())
+    print("Original similarity: ", similarity.item())
