@@ -166,6 +166,74 @@ class GCG:
 
     def get_filtered_cands(self, control_cand, tokenizer, curr_control=None):
         """
+        Filter input candidates with adjusted logic.
+
+        Parameters
+        ----------
+        control_cand : torch.Tensor
+            The list of control tokens (shape: [num_candidates, token_length])
+        tokenizer : object
+            The tokenizer object
+        curr_control : torch.Tensor
+            The current control token ids (shape: [token_length])
+
+        Returns
+        -------
+        list of torch.Tensor
+            The filtered list of control token tensors.
+        """
+        import logging
+
+        if curr_control is None:
+            raise Exception('Please provide the current control token ids')
+
+        cands, count = [], 0
+        for i in range(control_cand.shape[0]):
+            try:
+                decoded_str = tokenizer.decode(control_cand[i], skip_special_tokens=True)
+                # print(f"Candidate {i}: Decoded string: '{decoded_str}'")
+
+                # Basic validity check: non-empty string
+                if decoded_str.strip() == "":
+                    count += 1
+                    print(f"Candidate {i} is invalid because decoded string is empty.")
+                    continue
+
+                # Optionally, add more conditions based on your requirements
+                # For example, minimum length, presence of certain characters, etc.
+
+                # Check if the candidate is different from the current control
+                if not tokenizer.decode(curr_control, skip_special_tokens=True).strip() == decoded_str.strip():
+                    cands.append(control_cand[i])
+                    # print(f"Candidate {i} is valid and added to cands.")
+                else:
+                    count += 1
+                    print(f"Candidate {i} is invalid because it is identical to curr_control.")
+
+            except IndexError:
+                logging.error(f"IndexError: piece id is out of range for candidate at index {i}")
+                count += 1
+            except Exception as e:
+                logging.error(f"Unexpected error for candidate {i}: {e}")
+                count += 1
+
+        not_valid_ratio = round(count / len(control_cand), 2)
+        logging.warning(f"Warning: {not_valid_ratio} control candidates were not valid")
+
+        if not_valid_ratio > 0.1 and cands:
+            # Replicate the last valid candidate to match the required length
+            cands = cands + [cands[-1]] * (len(control_cand) - len(cands))
+            print(f"Filtered cands are less than control_cand. Replicating the last candidate to match the length.")
+        elif not cands:
+            print("All the control candidates are not valid. Please check the initial control string.")
+            # Optionally, return a default candidate to prevent empty input_ids
+            default_cand = torch.tensor([tokenizer.cls_token_id], device=control_cand.device)
+            cands.append(default_cand)
+
+        return cands
+
+    def get_filtered_cands_pass(self, control_cand, tokenizer, curr_control=None):
+        """
         filter input candidates
 
         Parameters
@@ -180,6 +248,7 @@ class GCG:
         Returns
         -------
         """
+        # pdb.set_trace()
 
         if curr_control is None:
             raise Exception('Please provide the current control token ids')
@@ -275,6 +344,7 @@ class GCG:
             logging.info(f"Control string: {control_str}")
             logging.info(f"Question string: {self.question}")
             logging.info(f"Current prompt: {curr_prompt}")
+            # pdb.set_trace()
             question_embedding = self.model(self.question).detach()
 
             self.model.zero_grad()
@@ -325,6 +395,7 @@ class GCG:
                 topk = 64
                 filter_cand=True
                 with torch.no_grad():
+                    # pdb.set_trace()
                     control_cand = self.sample_control(averaged_grad, control_tokens, batch_size, topk) # 128, 20
                     if filter_cand:
                         candidates.append(self.get_filtered_cands(control_cand, self.tokenizer, control_tokens)) # [[]]

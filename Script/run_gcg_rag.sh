@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MODEL="contriever"
+MODEL="ance"
 PYTHON_EXP_SCRIPT="Experiments/gcg_exp.py"
 PYTHON_PRE_SCRIPT="Experiments/data_process.py"
 
@@ -8,7 +8,7 @@ RUN_MODE="Run" #Test
 GROUP_MODE="category" # random, category
 GROUP_INDEX=$1
 MODE="all"
-DATASET="hotpotqa" # msmarco
+DATASET="msmarco" # msmarco
 TRAIN_FILE="./Datasets/${DATASET}/domain/train_domains_14/domain_${GROUP_INDEX}.jsonl"
 
 CONTROL_LENGTH=$2
@@ -21,6 +21,8 @@ elif [ "$MODEL" = "MPNetModel" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/MPNetModel"
 elif [ "$MODEL" = "contriever" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
+elif [ "$MODEL" = "ance" ]; then
+    MODEL_PATH="/data1/shaoyangguang/offline_model/ance"
 fi
 
 LOG_PATH="Logs/${MODEL}_Attack_${DATASET}/domain_${GROUP_INDEX}_control_${CONTROL_LENGTH}"

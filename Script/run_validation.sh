@@ -1,11 +1,14 @@
 #!/bin/bash
 
 export all_proxy=socks5://192.168.112.1:7890 
-
+export CUDA_VISIBLE_DEVICES=0
 PYTHON_SCRIPT="Experiments/validation_debug.py"
 
-LOG_PATH="./Result/validation_debug"
+RETRIEVER="contriever"
+DATASET="nq"
+TOPK=4
+LOG_PATH="./Logs/main_result/attack/${RETRIEVER}/${DATASET}/top${TOK+1}"
 
 mkdir -p "$LOG_PATH"
 
-python -u $PYTHON_SCRIPT > "$LOG_PATH/validation_pr_0-5.log" 2>&1
+python -u $PYTHON_SCRIPT --retriever $RETRIEVER --eval_dataset $DATASET --top_k $TOPK> "$LOG_PATH/main_result.log" 2>&1

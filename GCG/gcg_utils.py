@@ -92,6 +92,8 @@ def get_fixed_list(model_path):
         return ['*']
     elif 'contriever' in model_path:
         return ['!']
+    elif 'ance' in model_path:
+        return ['!']
     else:
         raise ValueError(f"Unknown model type: {model_path}")
     

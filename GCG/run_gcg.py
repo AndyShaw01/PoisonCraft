@@ -87,23 +87,30 @@ def merge_results(args, epoch_times):
     
     print(f"All epoch results combined into {combined_results_path}")
 
-def gcg_attack_all(args, epoch_times=4):
+def gcg_attack_all(args, epoch_times=1):
     """
     GCG attack on all queries.
     """
-    processes = []
-    for epoch_index in range(epoch_times):
-        p = multiprocessing.Process(target=run_epoch, args=(args, epoch_index))
-        p.start()
-        processes.append(p)
+    if epoch_times > 1:
 
-    for p in processes:
-        p.join()  # 设置超时时间，例如 600 秒
+        processes = []
+        for epoch_index in range(epoch_times):
+            p = multiprocessing.Process(target=run_epoch, args=(args, epoch_index))
+            p.start()
+            processes.append(p)
 
-    print("All epochs processing complete.")
+        for p in processes:
+            p.join()  # 设置超时时间，例如 600 秒
+
+        print("All epochs processing complete.")
+
+        merge_results(args, epoch_times)
+    else:
+        # not parallel
+        run_epoch(args, 0)
 
     # 合并结果
-    merge_results(args, epoch_times)
+    
 
 def gcg_attack(args):
     """
