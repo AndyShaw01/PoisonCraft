@@ -142,13 +142,14 @@ if __name__ == "__main__":
     parser.add_argument('--cluster_methods', type=str, choices=['kmeans', 'dbscan'], default='kmeans', help='The index of the target domain')
     parser.add_argument('--cluster_num_per_domain', type=int, default=5, help='The index of the target domain')
     parser.add_argument('--model_path', type=str, default='/data1/shaoyangguang/offline_model/contriever', help='target model path')
-    parser.add_argument('--all_seeds_save_path', type=str, default='./Result/transfer_attack/all_seeds_hotpotqa.csv', help='seed initial path')
+    parser.add_argument('--all_seeds_save_path', type=str, default='./Result/transfer_attack/all_seeds_nq-cm_2.csv', help='seed initial path')
     parser.add_argument('--cluster_result_path', type=str, default='./Result/transfer_attack/cluster_sample_25_hotpotqa.csv', help='cluster path')
     parser.add_argument('--domain_suffix_folder', type=str, default='Results_from_A800/part_results/Results/improve_gcg_test/batch-4/', help='domain result folder')
-    parser.add_argument('--target_dataset', choices=['hotpotqa', 'nq', 'contriever'], default='hotpotqa', help='The index of the target domain')
+    parser.add_argument('--target_dataset', choices=['hotpotqa', 'nq', 'contriever'], default='nq', help='The index of the target domain')
 
     args = parser.parse_args()
-    args.domain_suffix_folder = f"Main_Results/{args.target_dataset}_1126/batch-4/"
+    # args.domain_suffix_folder = f"Main_Results/{args.target_dataset}_1126/batch-4/"
+    args.domain_suffix_folder = f"Main_Results/contriever-msmarco/{args.target_dataset}/batch-4-stage2"
     args.cluster_result_path = f"./Result/transfer_attack/{args.target_dataset}_cluster_sample_25.csv"
 
     main(args)

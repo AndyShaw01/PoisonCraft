@@ -23,7 +23,7 @@ def load_attack_info(attack_info, file_path):
 
 def main(args):
     # Set result file
-    result_file = f'Result/transfer_attack/evaluate/{args.mode}_1126.csv'
+    result_file = f'Result/transfer_attack/evaluate/{args.mode}_1213.csv'
     if not os.path.exists(result_file):
         os.makedirs(os.path.dirname(result_file), exist_ok=True)    
     raw_fp = open(result_file, 'w', buffering=1)
@@ -50,7 +50,7 @@ def main(args):
         queries = df_queries['text'].tolist()
 
         # Load Ground Truth
-        ground_truth_path = f'./Datasets/hotpotqa/ground_truth_topk/ground_truth_top_{args.target_threshold}_domain_{args.domain_list[i]}.csv'
+        ground_truth_path = f'./Datasets/nq/ground_truth_topk_/ground_truth_top_{args.target_threshold}_domain_{args.domain_list[i]}.csv'
         ground_truth_df = pd.read_csv(ground_truth_path)[f'matched_bar_{args.target_threshold}']
         # transfer to numpy
         ground_truth = ground_truth_df.to_numpy()
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--embedder", choices=["t5", "mpnet", "contriever", "openai"], default="openai",help="Embedder model")
     parser.add_argument("--model_path", type=str, default="text-embedding-ada-002", help="Path to the model")
-    parser.add_argument("--suffix_path", type=str, default="./Result/transfer_attack/all_seeds_hotpotqa.csv")
+    parser.add_argument("--suffix_path", type=str, default="./Result/transfer_attack/all_seeds_nq.csv")
     parser.add_argument("--control_str_len_list", type=str, default=[50,55,60,65,70,75,80,85])
     parser.add_argument("--domain_list", type=str, default=[1,2,3,4,5,6,7,8,9,10,11,12,13,14])
     parser.add_argument("--queries_folder", type=str, default="./Dataset/nq/category/categorized_jsonl_files_14_train_recheck")
