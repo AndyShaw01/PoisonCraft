@@ -53,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument('--k', type=int, default=19, help='The number of top k results to consider')
     parser.add_argument('--category', type=int, default=1, help='The category of the queries')
     parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco', 'nq'], default='nq', help='The dataset to process')
-    parser.add_argument('--retriever', choices=['contriever', 'contriever-msmarco', 'ance'], default='ance', help='The retriever to process')
+    parser.add_argument('--retriever', choices=['contriever', 'contriever-msmarco', 'ance', 'openai'], default='openai', help='The retriever to process')
 
     args = parser.parse_args()
 
