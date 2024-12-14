@@ -11,42 +11,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
 from tqdm import tqdm
 
-def get_suffix_db(file_path):
-    # csv file header: query, context1, context2, context3, context4, context5. I need your merge them together. Such as : query + context1, query + context2, query + context3, query + context4, query + context5
-    # I need a list of strings
+def get_suffix_db(dataset):
+    file_path = f'./Main_Results/baseline/prompt_injection/{dataset}/shadow_queries.csv'
     df = pd.read_csv(file_path)
-    suffix_db = []
-    for i in range(len(df)):
-        query = df['query'][i]
-        context1 = df['context1'][i]
-        context2 = df['context2'][i]
-        context3 = df['context3'][i]
-        context4 = df['context4'][i]
-        context5 = df['context5'][i]
-        context6 = df['context6'][i]
-        context7 = df['context7'][i]
-        context8 = df['context8'][i]
-        context9 = df['context9'][i]
-        context10 = df['context10'][i]
-        suffix_db.append(query + ' ' + context1)
-        suffix_db.append(query + ' ' + context2)
-        suffix_db.append(query + ' ' + context3)
-        suffix_db.append(query + ' ' + context4)
-        suffix_db.append(query + ' ' + context5)
-        suffix_db.append(query + ' ' + context6)
-        suffix_db.append(query + ' ' + context7)
-        suffix_db.append(query + ' ' + context8)
-        suffix_db.append(query + ' ' + context9)
-        suffix_db.append(query + ' ' + context10)
-
-    return suffix_db
-
-
+    # load injected_query
+    injected_query = df['injected_query'].tolist()
+    return injected_query
 
 def main(args):
     # Load the sentence embedding model
     
-    result_file = f'Result/baseline/poisonedrag/{args.retriever}/{args.target_dataset}.csv'
+    result_file = f'Result/baseline/prompt_injection/{args.retriever}/{args.target_dataset}.csv'
 
     if not os.path.exists(result_file):
         os.makedirs(os.path.dirname(result_file), exist_ok=True)
@@ -62,14 +37,13 @@ def main(args):
         # Load Attack DB and embed them
         category_list = args.category_list
         threshold_list = args.threshold_list
-        all_list = get_suffix_db(f'./Main_Results/baseline/PoisonedRAG/{args.target_dataset}/result_nq.csv')
-        # pdb.set_trace()
+        all_list = get_suffix_db(args.target_dataset)
         # Load the ground truth
-
         block_size = 2048  # 根据你的显存调整块的大小
         
         for target_threshold in args.target_threshold:
             for i in range(len(category_list)):
+
                 # Load Queries
                 queries_path = args.queries_folder + f"/domain_{category_list[i]}.jsonl"
                 df_queries = pd.read_json(queries_path, lines=True)
@@ -119,6 +93,7 @@ def main(args):
                     jailbreak_num += len(matched_jailbreaks)
                 print(f"Category: {category_list[i]}, AttackDBNum: {len(all_list)}, ASN: {jailbreak_num}, ASR: {round(jailbreak_num/len(queries), 4)}")
                 writter.writerow([target_threshold, category_list[i], jailbreak_num, round(jailbreak_num/len(queries), 4)])
+            print("\n")        
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -132,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("--queries_folder", type=str, default="./Datasets/hotpotqa/category/categorized_jsonl_files_14_test_recheck")
     parser.add_argument("--model_path", type=str, default="/data1/shaoyangguang/offline_model/")
     parser.add_argument("--target_dataset", choices=['hotpotqa', 'nq', 'msmarco'], default='nq')
-    parser.add_argument("--retriever", choices=['contriever', 'contriever-msmarco', 'ance'], default='contriever')
+    parser.add_argument("--retriever", choices=['contriever', 'contriever-msmarco', 'simcse'], default='contriever-msmarco')
     # parser.add_argument("--ground_truth_file", type=str, default="./Dataset/nq/ground_truth/ground_truth_top_10_category_8.csv")
     parser.add_argument("--device", type=int, default=1)
     
