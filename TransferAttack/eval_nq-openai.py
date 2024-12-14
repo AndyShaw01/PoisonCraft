@@ -29,6 +29,7 @@ def get_embeddings(texts, model="text-embedding-ada-002"):
 
 def main(args):
     # Load embedding model
+    pdb.set_trace()
     openai_query_embeddings = get_embeddings(args.queries)
     openai_seed_embedding = get_embeddings(args.initial_seed)
     openai_similarity = np.dot(openai_query_embeddings, openai_seed_embedding.T)

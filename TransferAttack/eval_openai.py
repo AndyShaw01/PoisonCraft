@@ -7,7 +7,7 @@ import pdb
 openai.api_key = "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"  # 请替换为您的实际 API 密钥
 
 # 定义获取嵌入的函数
-def get_embeddings(texts, model="text-embedding-3-small"):
+def get_embeddings(texts, model="text-embedding-3-large"):
     """
     批量获取文本的嵌入。
     """
@@ -75,8 +75,8 @@ def main():
     contriever_file = "./Datasets/nq/nq-contriever.json"
     query_file = "./Datasets/nq/test_openai.jsonl"
     corpus_file = "./Datasets/nq/corpus.jsonl"
-    output_file = "./Datasets/nq/nq-openai-small.json"
-    pdb.set_trace()
+    output_file = "./Datasets/nq/nq-openai-large.json"
+    
     print("加载 Contriever 结果...")
     contriever_results = load_contriever_results(contriever_file, top_k=50)
     
@@ -110,7 +110,7 @@ def main():
         if not docs_text:
             print(f"警告: 查询 {query_id} 没有找到有效的文档。")
             continue
-        
+        # pdb.set_trace()
         # 计算查询和文档的嵌入
         texts = [query_text] + docs_text
         embeddings = get_embeddings(texts)
