@@ -2,9 +2,9 @@ import json
 import openai
 import numpy as np
 from tqdm import tqdm
-
+import pdb
 # 设置 OpenAI API 密钥
-openai.api_key = "sk-proj-***"  # 请替换为您的实际 API 密钥
+openai.api_key = "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"  # 请替换为您的实际 API 密钥
 
 # 定义获取嵌入的函数
 def get_embeddings(texts, model="text-embedding-3-small"):
@@ -73,10 +73,10 @@ def cosine_similarity(a, b):
 def main():
     # 文件路径
     contriever_file = "./Datasets/nq/nq-contriever.json"
-    query_file = "./Datasets/nq/query.jsonl"
-    corpus_file = "corpus.jsonl"
-    output_file = "nq-openai.json"
-    
+    query_file = "./Datasets/nq/test_openai.jsonl"
+    corpus_file = "./Datasets/nq/corpus.jsonl"
+    output_file = "./Datasets/nq/nq-openai-small.json"
+    pdb.set_trace()
     print("加载 Contriever 结果...")
     contriever_results = load_contriever_results(contriever_file, top_k=50)
     
