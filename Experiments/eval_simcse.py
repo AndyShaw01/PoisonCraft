@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoModel
 # 加载 SimCSE 模型
 def load_simcse_model(model_path="/data1/shaoyangguang/offline_model/simcse"):
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModel.from_pretrained(model_path).to("cuda:1" if torch.cuda.is_available() else "cpu")
+    model = AutoModel.from_pretrained(model_path).to("cuda:2" if torch.cuda.is_available() else "cpu")
     return tokenizer, model
 
 # 加载 Contriever 结果
@@ -38,8 +38,8 @@ def load_queries(file_path):
     return queries
 
 # 获取 SimCSE 嵌入
-def get_embeddings(texts, tokenizer, model, batch_size=16):
-    device = "cuda:1" if torch.cuda.is_available() else "cpu"
+def get_embeddings(texts, tokenizer, model, batch_size=64):
+    device = "cuda:2" if torch.cuda.is_available() else "cpu"
     embeddings = []
     for i in tqdm(range(0, len(texts), batch_size), desc="获取嵌入"):
         batch_texts = texts[i:i + batch_size]
@@ -74,10 +74,10 @@ def cosine_similarity(query_embedding, doc_embeddings):
 
 # 主流程
 def main():
-    contriever_file = "./Datasets/nq/nq-contriever.json"
-    corpus_file = "./Datasets/nq/corpus.jsonl"
-    query_file = "./Datasets/nq/test_queries.jsonl"
-    output_file = "./Datasets/nq/nq-simcse.json"
+    contriever_file = "./Datasets/hotpotqa/hotpotqa-contriever.json"
+    corpus_file = "./Datasets/hotpotqa/corpus.jsonl"
+    query_file = "./Datasets/hotpotqa/test_queries.jsonl"
+    output_file = "./Datasets/hotpotqa/hotpotqa-simcse.json"
     
     # 加载数据
     print("加载 Contriever 结果...")
