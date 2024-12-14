@@ -7,7 +7,7 @@ from tqdm import tqdm
 openai.api_key = "sk-proj-***"  # 请替换为您的实际 API 密钥
 
 # 定义获取嵌入的函数
-def get_embeddings(texts, model="text-embedding-ada-002"):
+def get_embeddings(texts, model="text-embedding-3-small"):
     """
     批量获取文本的嵌入。
     """
@@ -72,8 +72,8 @@ def cosine_similarity(a, b):
 # 主函数
 def main():
     # 文件路径
-    contriever_file = "nq-contriever.json"
-    query_file = "query.jsonl"
+    contriever_file = "./Datasets/nq/nq-contriever.json"
+    query_file = "./Datasets/nq/query.jsonl"
     corpus_file = "corpus.jsonl"
     output_file = "nq-openai.json"
     
