@@ -150,7 +150,7 @@ class SentenceEmbeddingModel(nn.Module):
         elif input_ids is not None:  # Calculate embeddings from input ids
             encoded_input = {'attention_mask': input_ids != 0}
             model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
-            print(model_output)
+            # print(model_output)
         else:                
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, max_length=512, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)

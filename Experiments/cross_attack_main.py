@@ -147,7 +147,7 @@ def main(args):
                             # 计算相似度
                             # pdb.set_trace()
                             similarity = torch.matmul(queries_embedding, attack_embedding.t())
-                            # pdb.set_trace()
+                            pdb.set_trace()
                             # 更新匹配结果
                             matched_jailbreaks.update((similarity > ground_truth_block).any(dim=1).nonzero(as_tuple=True)[0].tolist())
                         jailbreak_num += len(matched_jailbreaks)

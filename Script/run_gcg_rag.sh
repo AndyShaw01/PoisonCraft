@@ -23,6 +23,8 @@ elif [ "$MODEL" = "contriever" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
 elif [ "$MODEL" = "ance" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/ance"
+elif [ "$MODEL" = "simcse" ]; then
+    MODEL_PATH="/data1/shaoyangguang/offline_model/simcse"
 fi
 
 LOG_PATH="Logs/${MODEL}_Attack_${DATASET}/domain_${GROUP_INDEX}_control_${CONTROL_LENGTH}"

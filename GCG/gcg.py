@@ -123,7 +123,7 @@ class GCG:
         logging.basicConfig(
             level=logging.INFO, format='%(asctime)s %(message)s', datefmt='[%H:%M:%S]')
 
-    def init_adv_postfix(self, random=False):
+    def init_adv_postfix(self, random=True):
         """
         generate a fixed control string with the given length
         the control tokens can be randomly sampled from the following list
@@ -131,7 +131,7 @@ class GCG:
         cand_toks = []
         while len(cand_toks) != self.control_string_len:
             if random:
-                cand_list = ['!', 'the', 'of', 'and', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by',
+                cand_list = ['when', 'the', 'of', 'and', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by',
                              'this', 'with', 'it', 'from', 'at', 'are', 'as', 'be', 'was']
             else:
                 cand_list = get_fixed_list(self.args.model_path)
@@ -164,7 +164,7 @@ class GCG:
             ValueError("The mode is not supported")
         return loss
 
-    def get_filtered_cands(self, control_cand, tokenizer, curr_control=None):
+    def get_filtered_cands_ance(self, control_cand, tokenizer, curr_control=None):
         """
         Filter input candidates with adjusted logic.
 
@@ -232,7 +232,7 @@ class GCG:
 
         return cands
 
-    def get_filtered_cands_pass(self, control_cand, tokenizer, curr_control=None):
+    def get_filtered_cands(self, control_cand, tokenizer, curr_control=None):
         """
         filter input candidates
 
@@ -306,10 +306,6 @@ class GCG:
         new_control_toks = original_control_toks.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
         return new_control_toks
     
-    def evaluate_matched(self, loss=None):
-        # todo
-        pass
-            
 
     def run(self, target):
         self._nonascii_toks, self._ascii_toks = get_nonascii_toks(self.args.model_path, self.tokenizer)

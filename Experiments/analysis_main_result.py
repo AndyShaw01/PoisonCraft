@@ -1,11 +1,11 @@
 import pandas as pd
 
 # 读取CSV文件
-retriever = "contriever-msmarco"
+retriever = "contriever"
 dataset = "nq"
 mode = "retriever" # retriever or attack
-exp_mode = "baseline" # main_result or ablation baseline
-topk = 50
+exp_mode = "transfer_attack" # main_result or ablation baseline transfer_attack
+topk = 5
 # 提供的all_samples数量（根据您的需要进行调整）
 nq = 2762  # 例如这里假设为1000，如果有不同的值请修改
 hotpotqa = 5924
@@ -13,7 +13,7 @@ all_test = {"nq":2762, "hotpotqa":5924}
 
 
 if mode == "retriever":
-    file_path = f'Result/{exp_mode}/{retriever}/{dataset}.csv'  # 替换为您实际的文件路径 _no_freq
+    file_path = f'Result/{exp_mode}/{retriever}/{dataset}_c2s.csv'  # 替换为您实际的文件路径 _no_freq
     df = pd.read_csv(file_path)
     # 按 threshold 分组，求 ASN 总和
     grouped = df.groupby('threshold')['ASN'].sum().reset_index()
