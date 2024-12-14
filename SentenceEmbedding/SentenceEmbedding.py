@@ -7,7 +7,7 @@ from sentence_transformers.models import Pooling
 from sentence_transformers import SentenceTransformer
 
 import pdb
-
+from scipy.spatial.distance import cosine
 
 model_code_to_qmodel_name = {
     "contriever": "facebook/contriever",
@@ -71,6 +71,9 @@ class SentenceEmbeddingModel(nn.Module):
         elif "dpr-q" in model_path:
             self.model = DPRQuestionEncoder.from_pretrained(model_path)
             self.tokenizer = DPRQuestionEncoderTokenizerFast.from_pretrained(model_path)
+        elif "simcse" in model_path:
+            self.model = AutoModel.from_pretrained(model_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         else:
             ValueError("Model not supported")
         # pdb.set_trace()
@@ -87,41 +90,35 @@ class SentenceEmbeddingModel(nn.Module):
             encoded_input = {'attention_mask': (inputs_embeds != 0).any(dim=-1).long()}
             model_output = self.model(inputs_embeds=inputs_embeds)
         elif input_ids is not None:
-            # 确保 input_ids 是二维的
-            if input_ids.dim() == 1:
-                input_ids = input_ids.unsqueeze(0)
-                print("Unsqueezed input_ids to add batch dimension.")
+            # # 确保 input_ids 是二维的
+            # if input_ids.dim() == 1:
+            #     input_ids = input_ids.unsqueeze(0)
+            #     print("Unsqueezed input_ids to add batch dimension.")
             
-            # 确保 input_ids 是 LongTensor
-            if input_ids.dtype != torch.long:
-                input_ids = input_ids.long()
-                print("Converted input_ids to torch.long.")
+            # # 确保 input_ids 是 LongTensor
+            # if input_ids.dtype != torch.long:
+            #     input_ids = input_ids.long()
+            #     print("Converted input_ids to torch.long.")
             
-            # 确保 input_ids 在正确的设备上
-            input_ids = input_ids.to(self.device)
+            # # 确保 input_ids 在正确的设备上
+            # input_ids = input_ids.to(self.device)
             
-            # 打印 input_ids 的形状和类型以供调试
-            print(f"input_ids dtype: {input_ids.dtype}, shape: {input_ids.shape}, device: {input_ids.device}")
+            # # 打印 input_ids 的形状和类型以供调试
+            # print(f"input_ids dtype: {input_ids.dtype}, shape: {input_ids.shape}, device: {input_ids.device}")
             
             # 创建 attention_mask
             encoded_input = {'attention_mask': input_ids != 0}
-            
-            # 调用模型
-            try:
-                model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
-                print("Model output obtained successfully.")
-            except Exception as e:
-                print(f"Error during model forward pass: {e}")
-                raise e
+            model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
+            # # 调用模型
+            # try:
+            #     model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
+            #     print("Model output obtained successfully.")
+            # except Exception as e:
+            #     print(f"Error during model forward pass: {e}")
+            #     raise e
         else:
             # 处理 sentences 的情况
-            encoded_input = self.tokenizer(
-                sentences, 
-                padding=True, 
-                truncation=True, 
-                max_length=512, 
-                return_tensors='pt'
-            ).to(self.device)
+            encoded_input = self.tokenizer( sentences, padding=True, truncation=True, max_length=512, return_tensors='pt', output_hidden_states=True).to(self.device)
             model_output = self.model(**encoded_input)
         
         # 处理模型输出
@@ -158,7 +155,7 @@ class SentenceEmbeddingModel(nn.Module):
             encoded_input = self.tokenizer(sentences, padding=True, truncation=True, max_length=512, return_tensors='pt').to(self.device)
             model_output = self.model(**encoded_input)
             
-        if "dpr" in self.model_path:
+        if "simcse" in self.model_path:
             sentence_embeddings = model_output.pooler_output
         if "ance" in self.model_path:
             standard_out = {
@@ -169,6 +166,8 @@ class SentenceEmbeddingModel(nn.Module):
             features = self.dense(features)
             features = self.layer_norm(features)
             sentence_embeddings = features['sentence_embedding']
+        elif "simcse" in self.model_path:
+            sentence_embeddings = model_output.pooler_output  # 直接使用SimCSE的pooler_output
         else:
             sentence_embeddings = get_pooling_results(model_output.last_hidden_state, encoded_input['attention_mask'], pooling_mode='mean')
         
@@ -181,4 +180,20 @@ class SentenceEmbeddingModel(nn.Module):
 
 if __name__ == "__main__":
     # test
-    model_path = "/data1/shaoyangguang/offline_model/ance"
+    model_path = "/data1/shaoyangguang/offline_model/simcse"
+    model = SentenceEmbeddingModel(model_path)
+    tokenizer = model.tokenizer
+    texts = [
+        "There's a kid on a skateboard.",
+        "A kid is skateboarding.",
+        "A kid is inside the house."
+    ]
+
+    with torch.no_grad():
+        embeddings = model(sentences=texts)
+    
+    cosine_sim_0_1 = torch.nn.functional.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[1].unsqueeze(0))
+    cosine_sim_0_2 = torch.nn.functional.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[2].unsqueeze(0))
+
+    print(f"Cosine Similarity between embedding 0 and 1: {cosine_sim_0_1.item()}")
+    print(f"Cosine Similarity between embedding 0 and 2: {cosine_sim_0_2.item()}")
