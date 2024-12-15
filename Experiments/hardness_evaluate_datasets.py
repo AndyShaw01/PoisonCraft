@@ -2,10 +2,10 @@ import pandas as pd
 
 # read the data from the csv folder, and read every csv file in the folder, merge them into one dataframe
 mean_list = []
-dataset = "hotpotqa"
-retriever = "contriever-msmarco"
+dataset = "nq"
+retriever = "simcse"
 if dataset == "nq":
-    topks = [4, 9, 19, 29, 39, 49, 54, 59, 64, 69]
+    topks = [4, 9, 19, 49]
 else:
     topks = [4, 9, 19, 49]
 for topk in topks:

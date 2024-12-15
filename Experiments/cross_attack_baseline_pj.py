@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument("--target_dataset", choices=['hotpotqa', 'nq', 'msmarco'], default='nq')
     parser.add_argument("--retriever", choices=['contriever', 'contriever-msmarco', 'simcse'], default='contriever-msmarco')
     # parser.add_argument("--ground_truth_file", type=str, default="./Dataset/nq/ground_truth/ground_truth_top_10_category_8.csv")
-    parser.add_argument("--device", type=int, default=1)
+    parser.add_argument("--device", type=int, default=3)
     
     args = parser.parse_args()
     args.queries_folder = f"./Datasets/{args.target_dataset}/domain/test_domains_14"

@@ -11,6 +11,29 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
 from tqdm import tqdm
 
+
+def batch_cosine_similarity(query_embeddings, doc_embeddings):
+    """
+    计算多个查询和多个文档之间的余弦相似度。
+
+    Args:
+        query_embeddings (torch.Tensor): 查询嵌入，形状为 (x, d)
+        doc_embeddings (torch.Tensor): 文档嵌入，形状为 (n, d)
+
+    Returns:
+        torch.Tensor: 查询和文档之间的余弦相似度，形状为 (x, n)
+    """
+    # 对查询和文档嵌入进行归一化
+    query_norm = query_embeddings / query_embeddings.norm(dim=-1, keepdim=True)  # (x, d)
+    doc_norm = doc_embeddings / doc_embeddings.norm(dim=-1, keepdim=True)       # (n, d)
+
+    # 计算余弦相似度
+    # query_norm: (x, d)
+    # doc_norm.t(): (d, n)
+    # similarity: (x, n)
+    similarity = torch.mm(query_norm, doc_norm.t())
+    return similarity
+
 def get_suffix_db(file_path):
     # csv file header: query, context1, context2, context3, context4, context5. I need your merge them together. Such as : query + context1, query + context2, query + context3, query + context4, query + context5
     # I need a list of strings
@@ -23,25 +46,23 @@ def get_suffix_db(file_path):
         context3 = df['context3'][i]
         context4 = df['context4'][i]
         context5 = df['context5'][i]
-        context6 = df['context6'][i]
-        context7 = df['context7'][i]
-        context8 = df['context8'][i]
-        context9 = df['context9'][i]
-        context10 = df['context10'][i]
+        # context6 = df['context6'][i]
+        # context7 = df['context7'][i]
+        # context8 = df['context8'][i]
+        # context9 = df['context9'][i]
+        # context10 = df['context10'][i]
         suffix_db.append(query + ' ' + context1)
         suffix_db.append(query + ' ' + context2)
         suffix_db.append(query + ' ' + context3)
         suffix_db.append(query + ' ' + context4)
         suffix_db.append(query + ' ' + context5)
-        suffix_db.append(query + ' ' + context6)
-        suffix_db.append(query + ' ' + context7)
-        suffix_db.append(query + ' ' + context8)
-        suffix_db.append(query + ' ' + context9)
-        suffix_db.append(query + ' ' + context10)
+        # suffix_db.append(query + ' ' + context6)
+        # suffix_db.append(query + ' ' + context7)
+        # suffix_db.append(query + ' ' + context8)
+        # suffix_db.append(query + ' ' + context9)
+        # suffix_db.append(query + ' ' + context10)
 
     return suffix_db
-
-
 
 def main(args):
     # Load the sentence embedding model
@@ -62,7 +83,7 @@ def main(args):
         # Load Attack DB and embed them
         category_list = args.category_list
         threshold_list = args.threshold_list
-        all_list = get_suffix_db(f'./Main_Results/baseline/PoisonedRAG/{args.target_dataset}/result_nq.csv')
+        all_list = get_suffix_db(f'./Main_Results/baseline/poisonedrag/{args.target_dataset}/result_hotpotqa.csv')
         # pdb.set_trace()
         # Load the ground truth
 
@@ -112,7 +133,10 @@ def main(args):
 
                         # 计算相似度
                         # pdb.set_trace()
-                        similarity = torch.matmul(queries_embedding, attack_embedding.t())
+                        if args.retriever == 'simcse':
+                            similarity = batch_cosine_similarity(queries_embedding, attack_embedding)
+                        else:
+                            similarity = torch.matmul(queries_embedding, attack_embedding.t())
                         # pdb.set_trace()
                         # 更新匹配结果
                         matched_jailbreaks.update((similarity > ground_truth_block).any(dim=1).nonzero(as_tuple=True)[0].tolist())
@@ -132,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument("--queries_folder", type=str, default="./Datasets/hotpotqa/category/categorized_jsonl_files_14_test_recheck")
     parser.add_argument("--model_path", type=str, default="/data1/shaoyangguang/offline_model/")
     parser.add_argument("--target_dataset", choices=['hotpotqa', 'nq', 'msmarco'], default='nq')
-    parser.add_argument("--retriever", choices=['contriever', 'contriever-msmarco', 'ance'], default='contriever')
+    parser.add_argument("--retriever", choices=['contriever', 'contriever-msmarco', 'simcse'], default='contriever')
     # parser.add_argument("--ground_truth_file", type=str, default="./Dataset/nq/ground_truth/ground_truth_top_10_category_8.csv")
     parser.add_argument("--device", type=int, default=1)
     
