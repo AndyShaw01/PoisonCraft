@@ -58,10 +58,10 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, retriever, a
                     # candidate_file = f'./Results_from_A800/part_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv' # contriever attack on nq
                     
                     # simcse attack on nq
-                    # candidate_file = f'./Main_Results/simcse/nq/batch-4/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on nq
+                    candidate_file = f'./Main_Results/simcse/nq/batch-4/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on nq
                     
                     # simcse attack on hotpotqa
-                    candidate_file = f'./Main_Results/simcse/hotpotqa/batch-4/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on nq
+                    # candidate_file = f'./Main_Results/simcse/hotpotqa/batch-4/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on nq
                     try:
                         df = pd.read_csv(candidate_file)
                         # pdb.set_trace()

@@ -56,7 +56,10 @@ def get_suffix_db_main_result(category_list, control_str_len_list, attack_info, 
     if retriever == 'contriever' and dataset == 'nq':
         exp_list = ['improve_gcg_test']
     else:
-        exp_list = ['batch-4-stage1', 'batch-4-stage2'] #  contriever attack on msmarco 
+        if retriever == 'simcse':
+            exp_list = ['batch-4']
+        else:
+            exp_list = ['batch-4-stage1', 'batch-4-stage2'] #  contriever attack on msmarco 
     for category in category_list:
         for control_str_len in control_str_len_list:
             if aggregate:
@@ -67,11 +70,14 @@ def get_suffix_db_main_result(category_list, control_str_len_list, attack_info, 
                     # candidate_file = f'./Main_Results/{retriever}/nq/{exp}/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on msmarco 
                     if retriever == 'contriever' and dataset == 'nq':
                         candidate_file = f'./Results_from_A800/part_results/Results/{exp}/batch-4/category_{category}/results_{control_str_len}.csv' # contriever attack on nq
-                    elif dataset == 'nq':
+                    elif dataset == 'nq' and retriever == 'contriever-msmarco':
                         candidate_file = f'./Main_Results/{retriever}/nq/{exp}/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on msmarco 
                     elif dataset == 'hotpotqa':
                         candidate_file = f'./Main_Results/contriever/hotpotqa_1126/{exp}/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on msmarco 
-
+                    elif retriever == 'simcse':
+                        candidate_file = f'./Main_Results/simcse/{dataset}/batch-4/domain_{category}/combined_results_{control_str_len}.csv' # contriever attack on nq
+                    else:
+                        print("error")
                     try:
                         df = pd.read_csv(candidate_file)
                     except:
@@ -126,14 +132,17 @@ def setup():
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--baseline_method", choices=['prompt_injection', 'poisonedrag', 'None'], default='None')
     parser.add_argument("--ablation_method", choices=['no_adv', 'poison_rate', 'None'], default='None')
-    parser.add_argument("--url", choices=['asdasd', 'goog1a', 'ai4game','agent4sports'], default='ai4game')
+    parser.add_argument("--url", choices=['asdasd', 'goog1a', 'ai4game','agent4sports', 'None'], default='ai4game')
     args = parser.parse_args()
     if args.baseline_method != 'None':
         args.result_folder = f"./Result/baseline/attack/{args.baseline_method}/{args.retriever}/{args.eval_dataset}/top{args.top_k+1}/"
     elif args.ablation_method != 'None':   
         args.result_folder = f"./Result/ablation/attack/{args.ablation_method}/{args.retriever}/{args.eval_dataset}/top{args.top_k+1}/"
-    else:
+    elif args.url != 'None':
         args.result_folder = f"./Result/sens/attack/{args.retriever}/{args.eval_dataset}/{args.url}/top{args.top_k+1}/"
+    else:
+        args.result_folder = f"./Result/main_result/attack/{args.retriever}/{args.eval_dataset}/top{args.top_k+1}/"
+        
     print(args.result_folder)
     args.result_file = f"{args.result_folder}/main_debug.csv"
     if args.eval_dataset == "nq":
@@ -186,8 +195,9 @@ def main(args):
     elif args.baseline_method == 'poisonedrag':
         adv_text_list = get_suffix_db_baseline_pr(f'./Main_Results/baseline/poisonedrag/{args.eval_dataset}/result_{args.eval_dataset}.csv')
     else:
+        pdb.set_trace()
         adv_text_groups, adv_text_list = get_suffix_db_main_result(args.category_list, args.control_str_len_list, args.attack_info, args.retriever, args.eval_dataset)
-    # pdb.set_trace()
+    
     # adv_text_list = [args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info,
     #                 args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info,
     #                 args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info, args.attack_info,

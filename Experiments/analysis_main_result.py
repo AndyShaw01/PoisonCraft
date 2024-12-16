@@ -4,10 +4,12 @@ import pandas as pd
 retriever = "contriever" # simcse or contriever
 dataset = "nq" # hotpotqa nq
 mode = "retriever" # retriever or attack
-exp_mode = "ablation" # main_result or ablation baseline transfer_attack
+exp_mode = "transfer" # main_result or ablation baseline transfer _attack sens 
 
+tranfer_model = "openai-002"
 ablation_type = "no_adv" # no_adv poison_rate
-baseline_method = "prompt_injection" # poisonedrag or prompt_injection
+baseline_method = "poisonedrag" # poisonedrag or prompt_injection
+url = "goog1a"
 
 topk = 5
 # 提供的all_samples数量（根据您的需要进行调整）
@@ -25,6 +27,8 @@ if mode == "retriever":
         file_path = f'Result/{exp_mode}/{retriever}/{dataset}/top{topk}/main_result_add.csv'
     elif exp_mode == "ablation":
         file_path = f'Result/{exp_mode}/{retriever}/{ablation_type}/{dataset}/{dataset}_1.csv'
+    elif exp_mode == "transfer":
+        file_path = f"Result/{exp_mode}/{retriever}/{tranfer_model}/nq_002.csv"
     df = pd.read_csv(file_path)
     # 按 threshold 分组，求 ASN 总和
     grouped = df.groupby('threshold')['ASN'].sum().reset_index()
@@ -35,7 +39,7 @@ if mode == "retriever":
     # 显示最终结果
     print(grouped)
 else:
-    file_path = f'Result/{exp_mode}/attack/{baseline_method}/{retriever}/{dataset}/top{topk}/main.csv'
+    file_path = f'Result/{exp_mode}/attack/{retriever}/{dataset}/{url}/top{topk}/main_debug.csv'
     df = pd.read_csv(file_path)
     attack_nums = df['attacked_num'].sum()
     print(f"Attacked Nums: {attack_nums}\t ASR : {attack_nums/all_test[dataset]}")

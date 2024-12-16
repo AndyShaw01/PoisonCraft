@@ -2,10 +2,10 @@
 
 PYTHON_PRE_SCRIPT="Experiments/data_process_align.py"
 GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
-TOPK_LIST=4,9,19,49
-TARGET_DATASET="hotpotqa" # msmarco, hotpotqa
+TOPK_LIST=1
+TARGET_DATASET="nq" # msmarco, hotpotqa
 MODE="test" # test
-RETRIEVER="simcse" # contriever ance
+RETRIEVER="openai_3-small" # contriever ance
 for GROUP_INDEX in $(echo $GROUP_LIST | sed "s/,/ /g")
 do
     for TOP_K in $(echo $TOPK_LIST | sed "s/,/ /g")
