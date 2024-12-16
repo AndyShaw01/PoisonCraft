@@ -1,3 +1,3 @@
-# PoisonCraft
+# RAGInjection
 
-The offical repository for the PoisonCraft project.
+The offical repository for the RAGInjection project.
