@@ -104,114 +104,31 @@ def check_result(responses, queries, i):
     return prompt
     
 def init_query_classification(queries, i, mode):
-    if mode == 14:
         prompt = f"""
-            Please classify the following questions by topic into one of these domains:
-            1. History and Culture, 2. Entertainment and Media, 3. Sports, 4. Science, 5. Geography, 
-            6. Politics and Law, 7. Literature and Language, 8. Religion and Philosophy, 9. Economics and Business, 
-            10. Technology and Internet, 11. Film, TV, and Gaming, 12. Music, 13. Medicine and Health, 
-            14. Miscellaneous
+        Please classify the following questions by topic into one of these domains:
+        1. History and Culture, 2. Entertainment and Media, 3. Sports, 4. Science, 5. Geography, 
+        6. Politics and Law, 7. Literature and Language, 8. Religion and Philosophy, 9. Economics and Business, 
+        10. Technology and Internet, 11. Film, TV, and Gaming, 12. Music, 13. Medicine and Health, 
+        14. Miscellaneous
 
-            ========================================================
-            Here are the questions:
+        ========================================================
+        Here are the questions:
 
-            1. {queries[i]}
-            2. {queries[i+1]}
-            3. {queries[i+2]}
-            4. {queries[i+3]}
-            5. {queries[i+4]}
-            6. {queries[i+5]}
-            7. {queries[i+6]}
-            8. {queries[i+7]}
-            9. {queries[i+8]}
-            10. {queries[i+9]}
+        1. {queries[i]}
+        2. {queries[i+1]}
+        3. {queries[i+2]}
+        4. {queries[i+3]}
+        5. {queries[i+4]}
+        6. {queries[i+5]}
+        7. {queries[i+6]}
+        8. {queries[i+7]}
+        9. {queries[i+8]}
+        10. {queries[i+9]}
 
-            Please return to the 14 domains of questions above and returns only the list of corresponding symbols.
-            e.g., [3, 2, 1, 4, ...]
-            """
-    elif mode == 20:
-                prompt = f"""
-                    Please classify the following questions by topic into one of these categories:
-                    1. Historical Figures, 2. Actors/Performers, 3. Sports Figures, 4. Musicians/Singers, 5. Historical Events, 
-                    6. Film/TV Release Dates, 7. Other Important Dates, 8. Geographical Locations, 9. Film/TV Filming Locations, 
-                    10. Objects in Movies/TV Shows, 11. Biological Creatures/Animals, 12. Literature and Books, 13. Science and Technology, 
-                    14. Law and Government, 15. History and Culture, 16. Competitions and Events, 17. Music-Related, 
-                    18. Film/TV-Related, 19. Words and Expressions, 20. Natural Phenomena.
+        Please return to the 14 domains of questions above and returns only the list of corresponding symbols.
+        e.g., [3, 2, 1, 4, ...]
+        """
 
-                    ========================================================
-                    Here are some example questions and their corresponding classifications:
-
-                    1. "Who was the first emperor of China?" (Historical Figures)
-                    2. "Which actor played Iron Man in the Marvel movies?" (Actors/Performers)
-                    3. "Who won the FIFA World Cup in 2018?" (Sports Figures)
-                    4. "Who is the lead singer of the band Queen?" (Musicians/Singers)
-                    5. "What was the cause of the French Revolution?" (Historical Events)
-                    6. "When was the movie 'Inception' released?" (Film/TV Release Dates)
-                    7. "When is Christmas celebrated?" (Other Important Dates)
-                    8. "Where is the Great Wall of China located?" (Geographical Locations)
-                    9. "Where was 'The Lord of the Rings' filmed?" (Film/TV Filming Locations)
-                    10. "What weapon does Thor use in the Marvel movies?" (Objects in Movies/TV Shows)
-                    11. "What species is the giant panda?" (Biological Creatures/Animals)
-                    12. "Who wrote 'To Kill a Mockingbird'?" (Literature and Books)
-                    13. "What is the theory of evolution?" (Science and Technology)
-                    14. "What is the capital of the United States?" (Law and Government)
-                    15. "What is the significance of the Renaissance?" (History and Culture)
-                    16. "How often are the Olympic Games held?" (Competitions and Events)
-                    17. "What is the genre of the song 'Bohemian Rhapsody'?" (Music-Related)
-                    18. "What genre is the TV show 'Breaking Bad'?" (Film/TV-Related)
-                    19. "What does the phrase 'carpe diem' mean?" (Words and Expressions)
-                    20. "What causes a solar eclipse?" (Natural Phenomena)
-                    ========================================================
-                    the response is :[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-                    ========================================================
-                    Here are the questions:
-
-                    1. {queries[i]}
-                    2. {queries[i+1]}
-                    3. {queries[i+2]}
-                    4. {queries[i+3]}
-                    5. {queries[i+4]}
-                    6. {queries[i+5]}
-                    7. {queries[i+6]}
-                    8. {queries[i+7]}
-                    9. {queries[i+8]}
-                    10. {queries[i+9]}
-
-                    Please return to the 10 categories of questions above and returns only the list of corresponding symbols，e.g., [1, 2, 3, 4]
-                    """
-    elif mode == 7:
-                prompt =   f"""
-                    Please classify the following questions by topic into one of these categories: 
-                    1. People-related, 2. Location-related, 3. Event-related, 4. Object or Concept-related, 5. History or Culture-related, 6. Sports-related, 7. Science and Nature-related.
-                    
-                    ========================================================
-                    Here are some example questions and their corresponding classifications:
-
-                    1. "What was the cause of World War II?" (Event-related)
-                    1. "Who was the first president of the United States?" (People-related)
-                    3. "In which country are the Egyptian pyramids located?" (Location-related)
-                    4. "What is the theory of relativity?" (Object or Concept-related)
-                    5. "During which period did the Tang Dynasty rule in China?" (History or Culture-related)
-                    6. "What are the basic principles of photosynthesis?" (Science and Nature-related)
-                    7. "How often is the FIFA World Cup held?" (Sports-related)
-                    ========================================================
-                    the response is :[3, 2, 1, 4, 5, 7, 6]
-                    ========================================================
-                    Here are the questions:
-
-                    1. {queries[i]}
-                    2. {queries[i+1]}
-                    3. {queries[i+2]}
-                    4. {queries[i+3]}
-                    5. {queries[i+4]}
-                    6. {queries[i+5]}
-                    7. {queries[i+6]}
-                    8. {queries[i+7]}
-                    9. {queries[i+8]}
-                    10. {queries[i+9]}
-
-                    please classify them by topic into one of these categories, and returns only the list of corresponding symbols，e.g., [1, 2, 3, 4]
-                    """
     return prompt
 
 def add_class(args):

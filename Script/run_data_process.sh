@@ -5,7 +5,7 @@ GROUP_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14"
 TOPK_LIST=1
 TARGET_DATASET="nq" # msmarco, hotpotqa
 MODE="test" # test
-RETRIEVER="openai_3-small" # contriever ance
+RETRIEVER="openai_3-large" # contriever ance
 for GROUP_INDEX in $(echo $GROUP_LIST | sed "s/,/ /g")
 do
     for TOP_K in $(echo $TOPK_LIST | sed "s/,/ /g")
