@@ -140,6 +140,8 @@ def main(args):
                         # 计算相似度
                         # pdb.set_trace()
                         # similarity = torch.matmul(queries_embedding, attack_embedding.t())
+                        # calculate cosine similarity
+                        
                         similarity = batch_cosine_similarity(queries_embedding, attack_embedding)
                         # pdb.set_trace()
                         # 更新匹配结果

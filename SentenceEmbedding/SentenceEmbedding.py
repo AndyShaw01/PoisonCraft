@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
-from openai import OpenAI
+# from openai import OpenAI
 import numpy as np
 
 from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel, RobertaTokenizer, RobertaModel, DPRContextEncoder, DPRContextEncoderTokenizerFast, DPRQuestionEncoder, DPRQuestionEncoderTokenizerFast
@@ -182,22 +182,22 @@ class SentenceEmbeddingModel(nn.Module):
         self.model.zero_grad()
 
 
-class OpenAIEmbeddingLLM():
-    def __init__(self, model_path=None, api_key=None):
-        if api_key is None:
-            api_key = "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"
+# class OpenAIEmbeddingLLM():
+#     def __init__(self, model_path=None, api_key=None):
+#         if api_key is None:
+#             api_key = "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"
 
-        self.client = OpenAI(api_key = api_key)
-        self.model_path = model_path
+#         self.client = OpenAI(api_key = api_key)
+#         self.model_path = model_path
     
-    def get_embedding(self, prompt):
-        response = self.client.embeddings.create(
-            input=prompt,
-            model=self.model_path
-        )
-        # 正确访问嵌入
-        embeddings = [item.embedding for item in response.data]
-        return np.array(embeddings)
+#     def get_embedding(self, prompt):
+#         response = self.client.embeddings.create(
+#             input=prompt,
+#             model=self.model_path
+#         )
+#         # 正确访问嵌入
+#         embeddings = [item.embedding for item in response.data]
+#         return np.array(embeddings)
 if __name__ == "__main__":
     # test
     model_path = "/data1/shaoyangguang/offline_model/simcse"

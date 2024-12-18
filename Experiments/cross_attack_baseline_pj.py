@@ -18,6 +18,28 @@ def get_suffix_db(dataset):
     injected_query = df['injected_query'].tolist()
     return injected_query
 
+def batch_cosine_similarity(query_embeddings, doc_embeddings):
+    """
+    计算多个查询和多个文档之间的余弦相似度。
+
+    Args:
+        query_embeddings (torch.Tensor): 查询嵌入，形状为 (x, d)
+        doc_embeddings (torch.Tensor): 文档嵌入，形状为 (n, d)
+
+    Returns:
+        torch.Tensor: 查询和文档之间的余弦相似度，形状为 (x, n)
+    """
+    # 对查询和文档嵌入进行归一化
+    query_norm = query_embeddings / query_embeddings.norm(dim=-1, keepdim=True)  # (x, d)
+    doc_norm = doc_embeddings / doc_embeddings.norm(dim=-1, keepdim=True)       # (n, d)
+
+    # 计算余弦相似度
+    # query_norm: (x, d)
+    # doc_norm.t(): (d, n)
+    # similarity: (x, n)
+    similarity = torch.mm(query_norm, doc_norm.t())
+    return similarity
+
 def main(args):
     # Load the sentence embedding model
     
@@ -86,7 +108,11 @@ def main(args):
 
                         # 计算相似度
                         # pdb.set_trace()
-                        similarity = torch.matmul(queries_embedding, attack_embedding.t())
+                        # similarity = torch.matmul(queries_embedding, attack_embedding.t())
+                        if args.retriever == 'simcse':
+                            similarity = batch_cosine_similarity(queries_embedding, attack_embedding)
+                        else:
+                            similarity = torch.matmul(queries_embedding, attack_embedding.t())
                         # pdb.set_trace()
                         # 更新匹配结果
                         matched_jailbreaks.update((similarity > ground_truth_block).any(dim=1).nonzero(as_tuple=True)[0].tolist())
@@ -109,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument("--target_dataset", choices=['hotpotqa', 'nq', 'msmarco'], default='nq')
     parser.add_argument("--retriever", choices=['contriever', 'contriever-msmarco', 'simcse'], default='contriever-msmarco')
     # parser.add_argument("--ground_truth_file", type=str, default="./Dataset/nq/ground_truth/ground_truth_top_10_category_8.csv")
-    parser.add_argument("--device", type=int, default=1)
+    parser.add_argument("--device", type=int, default=3)
     
     args = parser.parse_args()
     args.queries_folder = f"./Datasets/{args.target_dataset}/domain/test_domains_14"

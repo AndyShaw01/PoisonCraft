@@ -23,3 +23,8 @@ def wrap_prompt(question, context, prompt_id=1) -> str:
         input_prompt = MULTIPLE_PROMPT.replace('[question]', question).replace('[context]', context)
     return input_prompt
 
+def wrap_prompt_url(question, context, url) -> str:
+    assert type(context) == list
+    context_str = "\n".join(context)
+    input_prompt = MULTIPLE_PROMPT.replace('[question]', question).replace('[context]', context_str).replace('asdasd', url)
+    return input_prompt

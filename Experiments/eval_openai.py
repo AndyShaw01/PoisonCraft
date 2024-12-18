@@ -1,13 +1,11 @@
 import json
 from tqdm import tqdm
 import torch
-from transformers import AutoTokenizer, AutoModel
+import openai
+import time
 
-# 加载 SimCSE 模型
-def load_simcse_model(model_path="/data1/shaoyangguang/offline_model/simcse"):
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModel.from_pretrained(model_path).to("cuda:2" if torch.cuda.is_available() else "cpu")
-    return tokenizer, model
+# 设置 OpenAI API 密钥
+openai.api_key = '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'  # 或者使用环境变量
 
 # 加载 Contriever 结果
 def load_contriever_results(file_path, top_k=100):
@@ -37,18 +35,36 @@ def load_queries(file_path):
             queries[item["_id"]] = item["text"]
     return queries
 
-# 获取 SimCSE 嵌入
-def get_embeddings(texts, tokenizer, model, batch_size=64):
-    device = "cuda:2" if torch.cuda.is_available() else "cpu"
+# 获取 OpenAI 嵌入
+def get_embeddings(texts, model="text-embedding-3-large", batch_size=64, retry=3, delay=5):
     embeddings = []
     for i in tqdm(range(0, len(texts), batch_size), desc="获取嵌入"):
         batch_texts = texts[i:i + batch_size]
-        encoded_input = tokenizer(batch_texts, padding=True, truncation=True, max_length=512, return_tensors="pt").to(device)
-        with torch.no_grad():
-            outputs = model(**encoded_input)
-            batch_embeddings = outputs.pooler_output  # 使用 SimCSE 的 pooler_output
-            embeddings.append(batch_embeddings)
-    return torch.cat(embeddings, dim=0)
+        for attempt in range(retry):
+            try:
+                response = openai.Embedding.create(
+                    input=batch_texts,
+                    model=model
+                )
+                batch_embeddings = [item['embedding'] for item in response['data']]
+                embeddings.extend(batch_embeddings)
+                break  # 成功后跳出重试循环
+            except openai.error.RateLimitError:
+                print("Rate limit exceeded. 等待一会儿再试...")
+                time.sleep(delay)
+            except openai.error.APIError as e:
+                print(f"OpenAI API 错误: {e}. 等待 {delay} 秒后重试...")
+                time.sleep(delay)
+            except Exception as e:
+                print(f"其他错误: {e}. 跳过当前批次...")
+                embeddings.extend([None] * len(batch_texts))  # 填充 None
+                break
+        else:
+            print("多次尝试失败，跳过当前批次。")
+            embeddings.extend([None] * len(batch_texts))
+    # 转换为 Tensor，并处理 None 值
+    valid_embeddings = [emb for emb in embeddings if emb is not None]
+    return torch.tensor(valid_embeddings)
 
 # 计算余弦相似度
 def cosine_similarity(query_embedding, doc_embeddings):
@@ -74,10 +90,10 @@ def cosine_similarity(query_embedding, doc_embeddings):
 
 # 主流程
 def main():
-    contriever_file = "./Datasets/hotpotqa/hotpotqa-contriever.json"
-    corpus_file = "./Datasets/hotpotqa/corpus.jsonl"
-    query_file = "./Datasets/hotpotqa/test_queries.jsonl"
-    output_file = "./Datasets/hotpotqa/hotpotqa-simcse.json"
+    contriever_file = "./Datasets/nq/nq-contriever-msmarco.json"
+    corpus_file = "./Datasets/nq/corpus.jsonl"
+    query_file = "./Datasets/nq/test_queries.jsonl"
+    output_file = "./Datasets/nq/nq-openai_3-large.json"
     
     # 加载数据
     print("加载 Contriever 结果...")
@@ -86,9 +102,6 @@ def main():
     corpus = load_corpus(corpus_file)
     print("加载查询数据...")
     queries = load_queries(query_file)
-    
-    print("加载 SimCSE 模型...")
-    tokenizer, model = load_simcse_model()
     
     final_results = {}
     
@@ -107,9 +120,18 @@ def main():
         
         # 获取嵌入
         all_texts = [query_text] + doc_texts
-        embeddings = get_embeddings(all_texts, tokenizer, model)
+        embeddings = get_embeddings(all_texts)
+        
+        if len(embeddings) != len(all_texts):
+            print(f"警告: 查询 {query_id} 的嵌入数量与文本数量不匹配。跳过此查询。")
+            continue
+        
         query_embedding = embeddings[0]
         doc_embeddings = embeddings[1:]
+        
+        # 将嵌入转换为浮点数 Tensor
+        query_embedding = query_embedding.float()
+        doc_embeddings = doc_embeddings.float()
         
         # 计算余弦相似度
         similarities = cosine_similarity(query_embedding, doc_embeddings)
