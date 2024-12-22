@@ -13,7 +13,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           GPTJForCausalLM, GPTNeoXForCausalLM,
                           LlamaForCausalLM)
 from GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
-from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, get_pooling_results
+from EmbeddingModel.SentenceEmbedding import SentenceEmbeddingModel, get_pooling_results
 
 def token_gradients(model, input_ids, question_embedding, control_slice):
     """

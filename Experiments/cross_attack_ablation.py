@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
+from EmbeddingModel.SentenceEmbedding import SentenceEmbeddingModel
 from tqdm import tqdm
 
 

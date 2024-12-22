@@ -7,9 +7,9 @@ import csv
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
-from SentenceEmbedding.utils import *
-from SentenceEmbedding.wrap_prompt import wrap_prompt, wrap_prompt_url
+from EmbeddingModel.SentenceEmbedding import SentenceEmbeddingModel
+from EmbeddingModel.utils import *
+from EmbeddingModel.wrap_prompt import wrap_prompt, wrap_prompt_url
 
 
 def get_suffix_db_baseline_pj(dataset):

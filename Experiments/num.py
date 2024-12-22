@@ -5,7 +5,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
+from EmbeddingModel.SentenceEmbedding import SentenceEmbeddingModel
 
 # 读取数据（确保文件有 'query' 字段）
 shadow_queries_path = './Datasets/nq/train_queries.jsonl'
