@@ -152,25 +152,6 @@ def create_model(model_path):
     model = OpenAILLM(api_key=api_key, model_path=model_path)
     return model
 
-def get_suffix_db(category_list, threshold_list, attack_info):
-    suffix_db = {}
-    suffix_all = {}
-    all_list = []
-    for category in category_list:
-        suffix_db[category] = {}
-        for threshold in threshold_list:
-            candidate_file = f'./Results/improve_exp_0912/batch-4/category_{category}/results_top_{threshold}.csv'
-            try:
-                df = pd.read_csv(candidate_file)
-            except:
-                continue
-            attack_suffix = [attack_info + ' ' + x for x in df['control_suffix'].tolist()]
-            suffix_db[category][threshold] = attack_suffix
-            suffix_all[category] = attack_suffix
-            all_list += attack_suffix
-
-    return suffix_db, suffix_all, all_list
-
 def load_jsonl_to_json(jsonl_file):
     # Read JSONL file
     with open(jsonl_file, 'r') as f:
