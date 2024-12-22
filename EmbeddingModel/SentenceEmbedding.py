@@ -79,7 +79,7 @@ class SentenceEmbeddingModel(nn.Module):
             self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         else:
             ValueError("Model not supported")
-        # pdb.set_trace()
+
         self.device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
         if "ance" in self.model_path.lower():
@@ -89,42 +89,15 @@ class SentenceEmbeddingModel(nn.Module):
     
     def forward_new(self, sentences=None, input_ids=None, inputs_embeds=None):
         if inputs_embeds is not None:
-            # 处理 inputs_embeds 的情况
             encoded_input = {'attention_mask': (inputs_embeds != 0).any(dim=-1).long()}
             model_output = self.model(inputs_embeds=inputs_embeds)
         elif input_ids is not None:
-            # # 确保 input_ids 是二维的
-            # if input_ids.dim() == 1:
-            #     input_ids = input_ids.unsqueeze(0)
-            #     print("Unsqueezed input_ids to add batch dimension.")
-            
-            # # 确保 input_ids 是 LongTensor
-            # if input_ids.dtype != torch.long:
-            #     input_ids = input_ids.long()
-            #     print("Converted input_ids to torch.long.")
-            
-            # # 确保 input_ids 在正确的设备上
-            # input_ids = input_ids.to(self.device)
-            
-            # # 打印 input_ids 的形状和类型以供调试
-            # print(f"input_ids dtype: {input_ids.dtype}, shape: {input_ids.shape}, device: {input_ids.device}")
-            
-            # 创建 attention_mask
             encoded_input = {'attention_mask': input_ids != 0}
             model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
-            # # 调用模型
-            # try:
-            #     model_output = self.model(input_ids=input_ids, attention_mask=encoded_input['attention_mask'])
-            #     print("Model output obtained successfully.")
-            # except Exception as e:
-            #     print(f"Error during model forward pass: {e}")
-            #     raise e
         else:
-            # 处理 sentences 的情况
             encoded_input = self.tokenizer( sentences, padding=True, truncation=True, max_length=512, return_tensors='pt', output_hidden_states=True).to(self.device)
             model_output = self.model(**encoded_input)
         
-        # 处理模型输出
         if "dpr" in self.model_path:
             sentence_embeddings = model_output.pooler_output
         elif "ance" in self.model_path:
@@ -182,22 +155,6 @@ class SentenceEmbeddingModel(nn.Module):
         self.model.zero_grad()
 
 
-# class OpenAIEmbeddingLLM():
-#     def __init__(self, model_path=None, api_key=None):
-#         if api_key is None:
-#             api_key = "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"
-
-#         self.client = OpenAI(api_key = api_key)
-#         self.model_path = model_path
-    
-#     def get_embedding(self, prompt):
-#         response = self.client.embeddings.create(
-#             input=prompt,
-#             model=self.model_path
-#         )
-#         # 正确访问嵌入
-#         embeddings = [item.embedding for item in response.data]
-#         return np.array(embeddings)
 if __name__ == "__main__":
     # test
     model_path = "/data1/shaoyangguang/offline_model/simcse"

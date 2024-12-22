@@ -1,0 +1,121 @@
+import torch
+import torch.nn as nn
+from transformers import MPNetModel, T5EncoderModel, AutoModel, RobertaModel
+from sentence_transformers import SentenceTransformer
+from sentence_transformers.models import Pooling
+import torch.nn.functional as F
+
+from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel, RobertaTokenizer, RobertaModel, DPRContextEncoder, DPRContextEncoderTokenizerFast, DPRQuestionEncoder, DPRQuestionEncoderTokenizerFast
+from sentence_transformers.models import Pooling
+from sentence_transformers import SentenceTransformer
+
+
+model_code_to_qmodel_name = {
+    "contriever": "facebook/contriever",
+    "contriever-msmarco": "facebook/contriever-msmarco",
+    "dpr-single": "facebook/dpr-question_encoder-single-nq-base",
+    "dpr-multi": "facebook/dpr-question_encoder-multiset-base",
+    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
+}
+
+model_code_to_cmodel_name = {
+    "contriever": "facebook/contriever",
+    "contriever-msmarco": "facebook/contriever-msmarco",
+    "dpr-single": "facebook/dpr-ctx_encoder-single-nq-base",
+    "dpr-multi": "facebook/dpr-ctx_encoder-multiset-base",
+    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
+}
+
+class SentenceEmbeddingModel(nn.Module):
+    def __init__(self, model_path, device=0):
+        super(SentenceEmbeddingModel, self).__init__()
+        self.model_path = model_path
+        self.device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
+        self.model, self.tokenizer = self._load_model(model_path)
+        self.model.to(self.device)
+        if "ance" in model_path.lower():
+            self.pooling, self.dense, self.layer_norm = self._get_ance_layers(model_path)
+            self.dense.to(self.device)
+            self.layer_norm.to(self.device)
+            self.pooling.to(self.device)
+
+    def _load_model(self, model_path):
+        """根据 model_path 加载模型和 tokenizer"""
+        if "MPNetModel" in model_path:
+            return MPNetModel.from_pretrained(model_path), MPNetTokenizer.from_pretrained(model_path)
+        elif "t5" in model_path:
+            return T5EncoderModel.from_pretrained(model_path), T5Tokenizer.from_pretrained(model_path)
+        elif "contriever" in model_path or "simcse" in model_path:
+            model = AutoModel.from_pretrained(model_path)
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+            return model, tokenizer
+        elif "ance" in model_path:
+            ance_model = SentenceTransformer(model_path)
+            model = ance_model[0].auto_model
+            tokenizer = ance_model.tokenizer
+            return model, tokenizer
+        else:
+            raise ValueError("Model not supported")
+
+    def _get_ance_layers(self, model_path):
+        """返回 ance 模型的 pooling、dense 和 layer_norm 层"""
+        ance_model = SentenceTransformer(model_path)
+        return ance_model[1], ance_model[2], ance_model[3]
+
+    def forward(self, sentences=None, input_ids=None, inputs_embeds=None):
+        """计算句子嵌入"""
+        encoded_input = self._prepare_input(sentences, input_ids, inputs_embeds)
+        model_output = self.model(**encoded_input)
+
+        if "ance" in self.model_path:
+            features = self.pooling({
+                'token_embeddings': model_output.last_hidden_state,
+                'attention_mask': encoded_input['attention_mask']
+            })
+            features = self.dense(features)
+            features = self.layer_norm(features)
+            return features['sentence_embedding']
+        
+        if "simcse" in self.model_path:
+            return model_output.pooler_output
+
+        return self.mean_pooling(model_output.last_hidden_state, encoded_input['attention_mask'])
+
+    def _prepare_input(self, sentences, input_ids, inputs_embeds):
+        """准备输入数据"""
+        if inputs_embeds is not None:
+            return {'attention_mask': (inputs_embeds != 0).any(dim=-1).long(), 'inputs_embeds': inputs_embeds}
+        elif input_ids is not None:
+            return {'input_ids': input_ids, 'attention_mask': input_ids != 0}
+        else:
+            encoded_input = self.tokenizer(sentences, padding=True, truncation=True, max_length=512, return_tensors='pt').to(self.device)
+            return encoded_input
+
+    def mean_pooling(self, token_embeddings, attention_mask):
+        """计算 mean pooling"""
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
+    def zero_grad(self):
+        """清零梯度"""
+        self.model.zero_grad()
+
+# 示例测试代码
+if __name__ == "__main__":
+    model_path = "/data1/shaoyangguang/offline_model/simcse"
+    model = SentenceEmbeddingModel(model_path)
+    tokenizer = model.tokenizer
+    texts = [
+        "There's a kid on a skateboard.",
+        "A kid is skateboarding.",
+        "A kid is inside the house."
+    ]
+
+    with torch.no_grad():
+        embeddings = model(sentences=texts)
+    
+    cosine_sim_0_1 = F.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[1].unsqueeze(0))
+    cosine_sim_0_2 = F.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[2].unsqueeze(0))
+
+    print(f"Cosine Similarity between embedding 0 and 1: {cosine_sim_0_1.item()}")
+    print(f"Cosine Similarity between embedding 0 and 2: {cosine_sim_0_2.item()}")
