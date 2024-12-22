@@ -6,7 +6,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
                           LlamaForCausalLM, MptForCausalLM, Qwen2ForCausalLM, 
                           GemmaForCausalLM, MistralForCausalLM) # 
 import time
-from EmbeddingModel.SentenceEmbedding import SentenceEmbeddingModel
+from embedding.SentenceEmbedding import SentenceEmbeddingModel
 
 def get_nonascii_toks(model_path, tokenizer, device='cpu'):
 
