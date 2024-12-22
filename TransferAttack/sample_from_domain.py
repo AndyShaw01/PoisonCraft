@@ -8,7 +8,7 @@ import numpy as np
 import pdb
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel
+from EmbeddingModel.SentenceEmbedding import SentenceEmbeddingModel
 
 from sklearn.cluster import KMeans, DBSCAN
 
