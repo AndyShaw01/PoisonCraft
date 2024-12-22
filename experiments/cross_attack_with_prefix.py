@@ -7,7 +7,7 @@ import csv
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from embedding.SentenceEmbedding import SentenceEmbeddingModel
+from embedding.sentence_embedding import SentenceEmbeddingModel
 
 def get_suffix_db(category_list, threshold_list, attack_info, prefix_mode):
     suffix_db = {}

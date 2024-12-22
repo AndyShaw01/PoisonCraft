@@ -17,15 +17,20 @@ from .llm import OpenAILLM
 
 model_code_to_qmodel_name = {
     "contriever": "/data1/shaoyangguang/offline_model/contriever",
-    "contriever-msmarco": "facebook/contriever-msmarco",
-    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
+    "contriever-msmarco": "/data1/shaoyangguang/offline_model/contriever-msmarco",
+    "dpr-single": "/data1/shaoyangguang/offline_model/dpr-question_encoder-single-nq-base",
+    "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
+    "ance": "/data1/shaoyangguang/offline_model/ance"
 }
 
 model_code_to_cmodel_name = {
     "contriever": "/data1/shaoyangguang/offline_model/contriever",
-    "contriever-msmarco": "facebook/contriever-msmarco",
-    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
+    "contriever-msmarco": "/data1/shaoyangguang/offline_model/contriever-msmarco",
+    "dpr-single": "/data1/shaoyangguang/offline_model/dpr-question_encoder-single-nq-base",
+    "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
+    "ance": "/data1/shaoyangguang/offline_model/ance"
 }
+
 
 def contriever_get_emb(model, input):
     return model(**input)

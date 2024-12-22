@@ -8,7 +8,7 @@ import pandas as pd
 import torch.nn.functional as F
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from embedding.SentenceEmbedding import SentenceEmbeddingModel
+from embedding.sentence_embedding import SentenceEmbeddingModel
 from tqdm import tqdm
 
 def batch_cosine_similarity(query_embeddings, doc_embeddings):

@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from embedding.SentenceEmbedding import SentenceEmbeddingModel, OpenAIEmbeddingLLM
+from embedding.sentence_embedding import SentenceEmbeddingModel, OpenAIEmbeddingLLM
 
 from tqdm import tqdm
 

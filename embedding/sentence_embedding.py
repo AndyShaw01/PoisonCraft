@@ -1,30 +1,9 @@
 import torch
 import torch.nn as nn
-from transformers import MPNetModel, T5EncoderModel, AutoModel, RobertaModel
-from sentence_transformers import SentenceTransformer
-from sentence_transformers.models import Pooling
 import torch.nn.functional as F
 
-from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel, RobertaTokenizer, RobertaModel, DPRContextEncoder, DPRContextEncoderTokenizerFast, DPRQuestionEncoder, DPRQuestionEncoderTokenizerFast
-from sentence_transformers.models import Pooling
 from sentence_transformers import SentenceTransformer
-
-
-model_code_to_qmodel_name = {
-    "contriever": "facebook/contriever",
-    "contriever-msmarco": "facebook/contriever-msmarco",
-    "dpr-single": "facebook/dpr-question_encoder-single-nq-base",
-    "dpr-multi": "facebook/dpr-question_encoder-multiset-base",
-    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
-}
-
-model_code_to_cmodel_name = {
-    "contriever": "facebook/contriever",
-    "contriever-msmarco": "facebook/contriever-msmarco",
-    "dpr-single": "facebook/dpr-ctx_encoder-single-nq-base",
-    "dpr-multi": "facebook/dpr-ctx_encoder-multiset-base",
-    "ance": "sentence-transformers/msmarco-roberta-base-ance-firstp"
-}
+from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel, RobertaTokenizer, RobertaModel, DPRContextEncoder, DPRContextEncoderTokenizerFast, DPRQuestionEncoder, DPRQuestionEncoderTokenizerFast
 
 class SentenceEmbeddingModel(nn.Module):
     def __init__(self, model_path, device=0):
@@ -40,7 +19,7 @@ class SentenceEmbeddingModel(nn.Module):
             self.pooling.to(self.device)
 
     def _load_model(self, model_path):
-        """根据 model_path 加载模型和 tokenizer"""
+        """load model and tokenizer"""
         if "MPNetModel" in model_path:
             return MPNetModel.from_pretrained(model_path), MPNetTokenizer.from_pretrained(model_path)
         elif "t5" in model_path:
@@ -58,7 +37,7 @@ class SentenceEmbeddingModel(nn.Module):
             raise ValueError("Model not supported")
 
     def _get_ance_layers(self, model_path):
-        """返回 ance 模型的 pooling、dense 和 layer_norm 层"""
+        """return the pooling layer, dense layer and layer norm layer for ANCE model"""
         ance_model = SentenceTransformer(model_path)
         return ance_model[1], ance_model[2], ance_model[3]
 
@@ -82,7 +61,7 @@ class SentenceEmbeddingModel(nn.Module):
         return self.mean_pooling(model_output.last_hidden_state, encoded_input['attention_mask'])
 
     def _prepare_input(self, sentences, input_ids, inputs_embeds):
-        """准备输入数据"""
+        """prepare input for model"""
         if inputs_embeds is not None:
             return {'attention_mask': (inputs_embeds != 0).any(dim=-1).long(), 'inputs_embeds': inputs_embeds}
         elif input_ids is not None:
@@ -97,10 +76,10 @@ class SentenceEmbeddingModel(nn.Module):
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
     def zero_grad(self):
-        """清零梯度"""
+        """zero grad for model"""
         self.model.zero_grad()
 
-# 示例测试代码
+# Example
 if __name__ == "__main__":
     model_path = "/data1/shaoyangguang/offline_model/simcse"
     model = SentenceEmbeddingModel(model_path)

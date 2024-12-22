@@ -7,7 +7,7 @@ import csv
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from embedding.SentenceEmbedding import SentenceEmbeddingModel
+from embedding.sentence_embedding import SentenceEmbeddingModel
 from tqdm import tqdm
 
 def get_suffix_db_cpa(run_num, kmeans_k, retriever, dataset, attack_info):

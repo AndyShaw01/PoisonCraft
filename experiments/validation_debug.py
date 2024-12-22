@@ -7,7 +7,7 @@ import csv
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from embedding.SentenceEmbedding import SentenceEmbeddingModel
+from embedding.sentence_embedding import SentenceEmbeddingModel
 from embedding.utils import *
 from embedding.wrap_prompt import wrap_prompt, wrap_prompt_url
 
