@@ -42,7 +42,7 @@ class SentenceEmbeddingModel(nn.Module):
         return ance_model[1], ance_model[2], ance_model[3]
 
     def forward(self, sentences=None, input_ids=None, inputs_embeds=None):
-        """计算句子嵌入"""
+        """compute sentence embeddings"""
         encoded_input = self._prepare_input(sentences, input_ids, inputs_embeds)
         model_output = self.model(**encoded_input)
 
@@ -71,7 +71,7 @@ class SentenceEmbeddingModel(nn.Module):
             return encoded_input
 
     def mean_pooling(self, token_embeddings, attention_mask):
-        """计算 mean pooling"""
+        """calculate mean pooling"""
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
