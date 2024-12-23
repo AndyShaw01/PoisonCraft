@@ -3,9 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from sentence_transformers import SentenceTransformer
-from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel, RobertaTokenizer, RobertaModel, DPRContextEncoder, DPRContextEncoderTokenizerFast, DPRQuestionEncoder, DPRQuestionEncoderTokenizerFast
+from transformers import MPNetModel, T5EncoderModel, T5Tokenizer, MPNetTokenizer, AutoTokenizer, AutoModel
 
 class SentenceEmbeddingModel(nn.Module):
+    """
+    Sentence Embedding Model
+
+    Args:
+        model_path (str): model path
+        device (int): device to use
+
+    Returns:
+        SentenceEmbeddingModel: model instance
+    """
     def __init__(self, model_path, device=0):
         super(SentenceEmbeddingModel, self).__init__()
         self.model_path = model_path

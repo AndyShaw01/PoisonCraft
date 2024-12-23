@@ -16,20 +16,19 @@ from tqdm import tqdm
 
 def batch_cosine_similarity(query_embeddings, doc_embeddings):
     """
-    计算多个查询和多个文档之间的余弦相似度。
+    Calculate the cosine similarity between queries and documents in batch.
 
     Args:
-        query_embeddings (torch.Tensor): 查询嵌入，形状为 (x, d)
-        doc_embeddings (torch.Tensor): 文档嵌入，形状为 (n, d)
+        query_embeddings (torch.Tensor): embedding of queries, with shape (x, d)
+        doc_embeddings (torch.Tensor): embedding of documents, with shape (n, d)
 
     Returns:
-        torch.Tensor: 查询和文档之间的余弦相似度，形状为 (x, n)
+        torch.Tensor: cosine similarity matrix, with shape (x, n)
     """
-    # 对查询和文档嵌入进行归一化
     query_norm = query_embeddings / query_embeddings.norm(dim=-1, keepdim=True)  # (x, d)
     doc_norm = doc_embeddings / doc_embeddings.norm(dim=-1, keepdim=True)       # (n, d)
 
-    # 计算余弦相似度
+    # cosine similarity
     # query_norm: (x, d)
     # doc_norm.t(): (d, n)
     # similarity: (x, n)
@@ -89,17 +88,19 @@ def get_suffix_db(category_list, control_str_len_list, attack_info, retriever, a
 
 def downsample_list(all_list, target_size):
     """
-    从一个包含大量元素的列表中下采样到指定数量。
-    
-    :param all_list: 原始列表
-    :param target_size: 下采样后的目标大小
-    :return: 下采样后的列表
+    Downsample a list to target size.
+
+    Args:
+        all_list (list): list to downsample
+        target_size (int): target size
+
+    Returns:
+        list: downsampled list
     """
     if target_size >= len(all_list):
-        # 如果目标大小大于或等于列表大小，返回原始列表
         return all_list
     
-    # 使用随机采样方法获取目标数量的元素
+    # randomly sample target_size elements from all_list
     return random.sample(all_list, target_size)
 
 
@@ -139,7 +140,7 @@ def main(args):
         # all_list = downsample_list(all_list= all_list, target_size=5)
         # Load the ground truth
         
-        block_size = 512  # 根据你的显存调整块的大小
+        block_size = 512  # set the block size for processing all_list
         
         for target_threshold in args.target_threshold:
             for i in range(len(category_list)):
@@ -153,44 +154,32 @@ def main(args):
                 ground_truth_path = f'./Datasets/{args.target_dataset}/ground_truth_topk_{args.retriever}/ground_truth_top_{target_threshold}_domain_{category_list[i]}.csv'
                 ground_truth_df = pd.read_csv(ground_truth_path)[f'matched_bar_{target_threshold}']
                 ground_truth = torch.tensor(ground_truth_df, device=f'cuda:{args.device}')
-                # pdb.set_trace()
-                query_block_size = 512  # 根据显存选择合适的查询块大小
+                query_block_size = 512  # set the block size for processing all_list
                 num_query_blocks = (len(queries) + query_block_size - 1) // query_block_size
-                # pdb.set_trace()
 
                 jailbreak_num = 0
 
                 for query_block_index in range(num_query_blocks):
                     matched_jailbreaks = set()
-                    # pdb.set_trace()
                     query_start_idx = query_block_index * query_block_size
                     query_end_idx = min(query_start_idx + query_block_size, len(queries))
-
-                    # 计算当前块的查询嵌入
                     queries_embedding = embedding_model(queries[query_start_idx:query_end_idx])
 
-                    # 提取对应的 ground_truth 块
                     ground_truth_block = ground_truth[query_start_idx:query_end_idx].unsqueeze(1)
 
-                    # 分块处理 all_list
-                    num_blocks = (len(all_list) + block_size - 1) // block_size  # 计算块的数量
-                    # pdb.set_trace()
-                    # for block_index in range(num_blocks):
+                    # process all_list in blocks
+                    num_blocks = (len(all_list) + block_size - 1) // block_size  
                     print(f"Processing Category: {category_list[i]}, QueryBlock: {query_block_index}/{num_query_blocks}")
                     for block_index in tqdm(range(num_blocks), desc="Processing Blocks"):
                         start_idx = block_index * block_size
                         end_idx = min(start_idx + block_size, len(all_list))
 
-                        # 计算当前块的 attack_embedding
                         attack_embedding = embedding_model(all_list[start_idx:end_idx])
 
-                        # 计算相似度
-                        # pdb.set_trace()
                         if args.retriever == 'simcse':
                             similarity = batch_cosine_similarity(queries_embedding, attack_embedding)
                         else:
                             similarity = torch.matmul(queries_embedding, attack_embedding.t())
-                        # 更新匹配结果
                         matched_jailbreaks.update((similarity > ground_truth_block).any(dim=1).nonzero(as_tuple=True)[0].tolist())
                     jailbreak_num += len(matched_jailbreaks)
                 print(f"Category: {category_list[i]}, AttackDBNum: {len(all_list)}, ASN: {jailbreak_num}, ASR: {round(jailbreak_num/len(queries), 4)}")
