@@ -6,13 +6,10 @@
 *.tsv
 *.csv
 *__pycache__/
-get_base_token
-XLLM-161C
-PoisonedRAG-main
-TestLLM
 *.tar.gz
 *.zip
-Results
-Result
+results
+result
 baselines
 eval_result
+TestLLM
