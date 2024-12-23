@@ -12,6 +12,16 @@ logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(asctime)s: %(m
 
 
 class Config:
+    """
+    Configuration class for the GCG attack.
+
+    Attributes:
+        train_queries_path (str): Path to the train queries file.
+        attack_target (str): The target of the attack.
+        attack_batch_size (int): Number of queries to attack in each batch.
+        group_index (int): Index of the group to attack.
+        control_string_length (int): Length of the control string.
+    """
     def __init__(self, train_queries_path, attack_target, attack_batch_size, group_index, control_string_length):
         self.train_queries_path = train_queries_path
         self.attack_target = attack_target
@@ -28,6 +38,14 @@ class Config:
 
 
 class BatchSampler:
+    """
+    Batch sampler
+
+    Attributes:
+        train_queries_path (str): Path to the train queries file.
+        attack_batch_size (int): Number of queries to attack in each batch.
+        queries_text (list): List of queries text.
+    """
     def __init__(self, train_queries_path, attack_batch_size):
         self.train_queries_path = train_queries_path
         self.attack_batch_size = attack_batch_size
@@ -107,3 +125,19 @@ def gcg_attack_all(args, epoch_times=1):
         merge_results(config, epoch_times)
     else:
         run_epoch(args, 0)
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run GCG attack on a set of queries.")
+    parser.add_argument("--train_queries_path", type=str, help="Path to the train queries file.")
+    parser.add_argument("--attack_target", type=str, help="The target of the attack.")
+    parser.add_argument("--attack_batch_size", type=int, help="Number of queries to attack in each batch.")
+    parser.add_argument("--group_index", type=int, help="Index of the group to attack.")
+    parser.add_argument("--control_string_length", type=int, help="Length of the control string.")
+    parser.add_argument("--target", type=str, help="The target of the attack.")
+    parser.add_argument("--epoch_times", type=int, default=1, help="Number of epochs to run.")
+    args = parser.parse_args()
+
+    gcg_attack_all(args, args.epoch_times)

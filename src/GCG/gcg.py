@@ -17,6 +17,39 @@ from embedding.sentence_embedding import SentenceEmbeddingModel
 class GCG:
     """
     GCG Attack Class.
+
+    Args:
+        args (Namespace): Command-line arguments for initializing the attack.
+
+    Attributes:
+        args (Namespace): The original command-line arguments, containing:
+            - General settings:
+                question (str): Question to attack.
+                model_path (str): Path to the model.
+                save_path (str): Path to save results.
+                index (int): Index of the question.
+            - Attack configuration:
+                control_string_length (int): Length of the control string.
+                max_steps (int): Maximum number of steps.
+                max_attack_attempts (int): Maximum number of attack attempts.
+                max_prompts_in_single_attack (int): Maximum number of prompts in a single attack.
+                max_successful_prompt (int): Maximum number of successful prompts.
+                max_attack_steps (int): Maximum number of attack steps.
+                loss_threshold (float): Loss threshold.
+                early_stop_iterations (int): Early stop iterations.
+                early_stop_local_optim (int): Early stop local optimization.
+            - Batch settings:
+                attack_batch_size (int): Batch size used for attacks.
+        device (torch.device): Device on which computations are performed.
+        model (SentenceEmbeddingModel): The SentenceEmbeddingModel instance.
+        tokenizer (AutoTokenizer): Tokenizer instance with specific padding settings.
+        result_file (str): Path to the results file.
+        result_writer (csv.writer): CSV writer for saving results.
+        _nonascii_toks (list): List of non-ASCII tokens.
+        _ascii_toks (list): List of ASCII tokens.
+    
+    Returns:
+        GCG: The GCG attack instance
     """
     def __init__(self, args):
         self.args = args
@@ -39,7 +72,6 @@ class GCG:
         self.early_stop_iterations = getattr(args, 'early_stop_iterations', 500)
         self.early_stop_local_optim = getattr(args, 'early_stop_local_optim', 100)
         self.attack_batch_size = args.attack_batch_size
-        self.attack_batch_mode = args.attack_batch_mode
         self.no_space = False
 
         # Logging setup
@@ -149,3 +181,26 @@ class GCG:
         # Save results
         for i, prompt in enumerate(optim_prompts):
             self.result_writer.writerow([self.args.index, self.args.question, prompt, best_loss, optim_steps[i], attack_attempt])
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--question", type=str, required=True, help="Question to attack")
+    parser.add_argument("--model_path", type=str, required=True, help="Path to the model")
+    parser.add_argument("--control_string_length", type=int, default=5, help="Length of the control string")
+    parser.add_argument("--max_steps", type=int, default=100, help="Maximum number of steps")
+    parser.add_argument("--max_attack_attempts", type=int, default=3, help="Maximum number of attack attempts")
+    parser.add_argument("--max_prompts_in_single_attack", type=int, default=1, help="Maximum number of prompts in a single attack")
+    parser.add_argument("--max_successful_prompt", type=int, default=1, help="Maximum number of successful prompts")
+    parser.add_argument("--max_attack_steps", type=int, default=1000, help="Maximum number of attack steps")
+    parser.add_argument("--loss_threshold", type=float, default=0.5, help="Loss threshold")
+    parser.add_argument("--early_stop_iterations", type=int, default=500, help="Early stop iterations")
+    parser.add_argument("--early_stop_local_optim", type=int, default=100, help="Early stop local optimization")
+    parser.add_argument("--attack_batch_size", type=int, default=1, help="Attack batch size")
+    parser.add_argument("--save_path", type=str, default=None, help="Path to save results")
+    parser.add_argument("--index", type=int, default=0, help="Index of the question")
+    args = parser.parse_args()
+
+    gcg = GCG(args)
+    gcg.run(args.question)
