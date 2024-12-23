@@ -2,14 +2,11 @@ import sys
 import os
 import argparse
 import pdb
-import torch
-import csv
-import pandas as pd
 import numpy as np
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from embedding.sentence_embedding import SentenceEmbeddingModel, OpenAIEmbeddingLLM
-from TransferAttack.mutate import llm_mutate
+from transfer_attack.mutate import llm_mutate
 
 def main(args):
     # Load embedding model

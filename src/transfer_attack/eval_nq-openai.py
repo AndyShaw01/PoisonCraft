@@ -13,7 +13,7 @@ import openai
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 # from SentenceEmbedding.SentenceEmbedding import SentenceEmbeddingModel, OpenAIEmbeddingLLM
 # from TransferAttack.mutate import llm_mutate
-openai.api_key = "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"  # 请替换为您的实际 API 密钥
+openai.api_key = "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"  
 
 def get_embeddings(texts, model="text-embedding-ada-002"):
     """
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, default='test')
     parser.add_argument('--embedder', choices=['openai', 'contriever'], default='openai')
-    parser.add_argument('--model_path', type=dict, default={'openai': 'text-embedding-ada-002', 'meta': '/data1/shaoyangguang/offline_model/contriever'})
+    parser.add_argument('--model_path', type=dict, default={'openai': 'text-embedding-ada-002', 'meta': '/data1/username/offline_model/contriever'})
     parser.add_argument('--queries', type=str, default=['when do you get your dress blues in the army', 
                                                         'who is the king and queen of the netherlands', 
                                                         'where does the black friday term come from', 

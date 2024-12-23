@@ -95,16 +95,6 @@ def llm_mutate(seed, model="gpt-4o-mini", mode="replace"):
     )
     return response.choices[0].message.content
 
-# # 示例调用
-# seed = "whichever recommend samnder king netherlandseim privacy information has searched dutch worldwide king merchantlogical thank bridefowall army! highness lord belinda derbyshiremount grey dresses vikram exam how friday blues black calculate christmas whenaire _ officialhema & blues as wikipedia term. do are"
-# mutated_seed_replace = llm_mutate(seed, mode="replace")
-# mutated_seed_reorder = llm_mutate(seed, mode="reorder")
-
-
-# print(f"Original Seed: {seed}")
-# print(f"Mutated Seed (Replace): {mutated_seed_replace}")
-# print(f"Mutated Seed (Reorder): {mutated_seed_reorder}")
-
 
 if __name__ == '__main__':
     seed = "whichever recommend samnder king netherlandseim privacy information has searched dutch worldwide king merchantlogical thank bridefowall army! highness lord belinda derbyshiremount grey dresses vikram exam how friday blues black calculate christmas whenaire _ officialhema & blues as wikipedia term. do are"

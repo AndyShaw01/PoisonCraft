@@ -71,7 +71,7 @@ def main(args):
                 queries_embedding = embedding_model(queries[query_start_idx:query_end_idx]).detach().cpu().numpy()
             ground_truth_block = ground_truth[query_start_idx:query_end_idx]
             ground_truth_block = np.expand_dims(ground_truth_block, axis=1)
-            num_blocks = (len(poison_info) + block_size - 1) // block_size  # 计算块的数量
+            num_blocks = (len(poison_info) + block_size - 1) // block_size  
             print(f"Processing Category: {args.domain_list[i]}, QueryBlock: {query_block_index}/{num_query_blocks}")
             for block_index in tqdm(range(num_blocks), desc="Processing Blocks"):
                 start_idx = block_index * block_size
@@ -80,7 +80,6 @@ def main(args):
                     attack_embedding = embedding_model.get_embedding(poison_info[start_idx:end_idx])
                 else:
                     attack_embedding = embedding_model(poison_info[start_idx:end_idx]).detach().cpu().numpy()
-                # pdb.set_trace()
                 # similarity = torch.matmul(queries_embedding, attack_embedding.t())
                 similarity = np.dot(queries_embedding, attack_embedding.T)
                 # matched_jailbreaks.update((similarity > ground_truth_block).any(dim=1).nonzero(as_tuple=True)[0].tolist())
@@ -108,7 +107,7 @@ if __name__ == "__main__":
     if args.embedder == 'openai':
         args.model_path = 'text-embedding-ada-002'
     else:
-        args.model_path = f'/data1/shaoyangguang/offline_model/{args.embedder}'
+        args.model_path = f'/data1/usrname/offline_model/{args.embedder}'
 
     args.queries_folder = f'./Datasets/{args.target_dataset}/domain/test_domains_14'
 
