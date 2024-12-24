@@ -5,25 +5,21 @@ import json
 import argparse
 import pdb
 def main(args):
-    # 读取 TSV 文件并去重
+    # Read the TSV file and drop duplicates
     df = pd.read_csv(args.id_file_path, sep="\t")
     df = df.drop_duplicates(subset=["query-id"])
     print(df.shape)
     
-    # 提取 query-id 列为集合，提高查找速度
     query_id_set = set(df["query-id"])
 
-    # 读取 JSONL 文件并筛选符合条件的 JSON 项
+    # Read the JSONL file and select the queries with the query ids
     selected_queries = []
     with open(args.target_file_path, "r") as f:
         for line in f:
             data = json.loads(line)
-            # pdb.set_trace()
             if int(data["_id"]) in query_id_set:
-                # pdb.set_trace()
                 selected_queries.append(data)
-
-    # 保存到新的 JSONL 文件中
+                
     with open("./Datasets/msmarco/selected_queries.jsonl", "w") as f:
         for query in selected_queries:
             f.write(json.dumps(query) + "\n")

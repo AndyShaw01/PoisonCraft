@@ -6,6 +6,13 @@ import pdb
 def get_matched_bar(results_file_path, k):
     """
     Based on the results file, get the kth matched bar for each query.
+
+    Args:
+        results_file_path (str): The path to the results file
+        k (int): The number of top k results to consider
+
+    Returns:
+        pd.DataFrame: The kth similarity for each query
     """ 
     with open(results_file_path, 'r') as f:
         data = json.load(f)
@@ -26,25 +33,21 @@ def get_matched_bar(results_file_path, k):
     return kth_similarity_df
 
 def main(args):
-    # 获取第 k 个相似度的匹配数据
+    # Get the kth similarity for each query
     kth_similarity_df = get_matched_bar(args.results_file_path, args.k)
 
-    # save the kth similarity to csv
-    # kth_similarity_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk/{args.dataset}_top_{args.k}_category_{args.category}.csv', index=False)
-
-    # 读取 JSONL 文件的 _id 顺序
+    # Load the train queries
     queries_id = []
     with open(args.train_queries_path, 'r') as f:
         for line in f:
             data = json.loads(line)
             queries_id.append(data['_id'])
-    # 根据 _id 过滤并对 CSV 数据进行排序
+    # sort the kth similarity by the order of the queries
     selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
     selected_df['id_order'] = pd.Categorical(selected_df['test_name'], categories=queries_id, ordered=True)
     sorted_df = selected_df.sort_values('id_order').drop(columns='id_order')
-    # 保存对齐后的文件
     sorted_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk_{args.retriever}/ground_truth_top_{args.k}_domain_{args.category}.csv', index=False)
-    print("对齐后的结果已保存。")
+    print("The aligned results have been saved.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')

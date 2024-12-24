@@ -1,12 +1,27 @@
+import os
 import json
 import random
 
+from beir import util
 
-if __name__ == '__main__':
-    dataset = "hotpotqa" # msmarco, nq, hotpotqa
-    original_queries_file_path = f"./Datasets/{dataset}/selected_queries.jsonl"
-    train_queries_file_path = f"./Datasets/{dataset}/train_queries.jsonl"
-    test_queries_file_path = f"./Datasets/{dataset}/test_queires.jsonl"
+
+# Download and save dataset
+datasets = ['nq', 
+            'msmarco', 
+            'hotpotqa']
+for dataset in datasets:
+    url = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/{}.zip".format(dataset)
+    out_dir = os.path.join(os.getcwd(), "datasets_test")
+    data_path = os.path.join(out_dir, dataset)
+    if not os.path.exists(data_path):
+        data_path = util.download_and_unzip(url, out_dir)
+
+os.system('rm datasets_test/*.zip')
+
+for dataset in datasets:
+    original_queries_file_path = f"./datasets_test/{dataset}/selected_queries.jsonl"
+    train_queries_file_path = f"./datasets_test/{dataset}/train_queries.jsonl"
+    test_queries_file_path = f"./datasets_test/{dataset}/test_queires.jsonl"
     data = []
     # Load data from file
     with open(f'{original_queries_file_path}', 'r') as f:

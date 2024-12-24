@@ -17,6 +17,17 @@ class LLM:
         raise NotImplementedError("LLM must implement classify method.")
     
 class OpenAILLM(LLM):
+    """
+    OpenAI LLM class for question classification
+
+    Args:
+        model_path (str): OpenAI model path
+        api_key (str): OpenAI API key
+        system_message (str): System message to be displayed in the chat
+        
+    Returns:
+        list: List of integers corresponding to the classification of the questions
+    """
     def __init__(self,
                  model_path,
                  api_key=None,
@@ -104,7 +115,7 @@ def check_result(responses, queries, i):
     return prompt
     
 def init_query_classification(queries, i, mode):
-        prompt = f"""
+    prompt = f"""
         Please classify the following questions by topic into one of these domains:
         1. History and Culture, 2. Entertainment and Media, 3. Sports, 4. Science, 5. Geography, 
         6. Politics and Law, 7. Literature and Language, 8. Religion and Philosophy, 9. Economics and Business, 
@@ -195,7 +206,7 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Classify questions')
-    parser.add_argument('--api_key', type=str, default='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', help='OpenAI API key')
+    parser.add_argument('--api_key', type=str, default='sk-proj-', help='OpenAI API key')
     parser.add_argument('--model_path', type=str, default='gpt-4o-mini', help='OpenAI model path')
     parser.add_argument('--file_path', type=str, default='./Datasets/train_queries.jsonl', help='The queries file')
     parser.add_argument('--output_path', type=str, default='./Dataset/train_queries_add_class_14.jsonl', help='The output file')
