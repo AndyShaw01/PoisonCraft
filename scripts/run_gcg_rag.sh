@@ -1,10 +1,9 @@
 #!/bin/bash
 
-MODEL="ance"
+RETRIEVER="ance"
 PYTHON_EXP_SCRIPT="Experiments/gcg_exp.py"
 PYTHON_PRE_SCRIPT="Experiments/data_process.py"
 
-RUN_MODE="Run" #Test
 GROUP_MODE="category" # random, category
 GROUP_INDEX=$1
 MODE="all"
@@ -15,15 +14,15 @@ CONTROL_LENGTH=$2
 ATTACK_BATCH_SIZE=4
 LOSS_THRESHOLD=0.2
 
-if [ "$MODEL" = "t5-base" ]; then
+if [ "$RETRIEVER" = "t5-base" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/t5-base"
-elif [ "$MODEL" = "MPNetModel" ]; then
+elif [ "$RETRIEVER" = "MPNetModel" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/MPNetModel"
 elif [ "$MODEL" = "contriever" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
-elif [ "$MODEL" = "ance" ]; then
+elif [ "$RETRIEVER" = "ance" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/ance"
-elif [ "$MODEL" = "simcse" ]; then
+elif [ "$RETRIEVER" = "simcse" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/simcse"
 fi
 
@@ -36,11 +35,6 @@ mkdir -p "$LOG_PATH_PRE"
 
 export CUDA_VISIBLE_DEVICES=$3
 echo "Using GPU $3"
-# Conditional flag for ADD_EOS
-ADD_EOS_FLAG=""
-if [ "$ADD_EOS" = "True" ]; then
-    ADD_EOS_FLAG="--add_eos"
-fi
 
 python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH $ADD_EOS_FLAG \
     --loss_threshold $LOSS_THRESHOLD \
