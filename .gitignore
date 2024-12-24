@@ -8,8 +8,10 @@
 *__pycache__/
 *.tar.gz
 *.zip
-results
 result
+results
+results_old
+results_from_A800
 baselines
 eval_result
 TestLLM
