@@ -3,7 +3,7 @@ import time
 from .base_model import BaseModel
 
 
-class PaLM2(BaseModel):
+class PaLM2Model(BaseModel):
     def __init__(self, config):
         super().__init__(config)
         self.api_keys = config["api_key_info"]["api_keys"]

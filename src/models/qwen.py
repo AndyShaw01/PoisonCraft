@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from .base_model import BaseModel
 
 
-class Qwen(BaseModel):
+class QwenModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
         self.device = config["params"]["device"]

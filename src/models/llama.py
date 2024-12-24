@@ -3,7 +3,7 @@ from transformers import LlamaTokenizer, LlamaForCausalLM
 from .base_model import BaseModel
 
 
-class Llama(BaseModel):
+class LlamaModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
         self.device = config["params"]["device"]

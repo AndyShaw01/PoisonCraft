@@ -2,7 +2,7 @@ from openai import OpenAI
 from .base_model import BaseModel
 
 
-class GPT(BaseModel):
+class GPTModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
         api_keys = config["api_key_info"]["api_keys"]
