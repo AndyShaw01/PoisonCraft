@@ -4,6 +4,8 @@ import json
 import random
 import multiprocessing
 import logging
+import argparse
+
 from gcg import GCG
 
 multiprocessing.set_start_method('spawn', force=True)
@@ -19,20 +21,20 @@ class Config:
         train_queries_path (str): Path to the train queries file.
         attack_target (str): The target of the attack.
         attack_batch_size (int): Number of queries to attack in each batch.
-        group_index (int): Index of the group to attack.
+        domain_index (int): Index of the domain to attack.
         control_string_length (int): Length of the control string.
     """
-    def __init__(self, train_queries_path, attack_target, attack_batch_size, group_index, control_string_length):
+    def __init__(self, train_queries_path, attack_target, attack_batch_size, domain_index, control_string_length):
         self.train_queries_path = train_queries_path
         self.attack_target = attack_target
         self.attack_batch_size = attack_batch_size
-        self.group_index = group_index
+        self.domain_index = domain_index
         self.control_string_length = control_string_length
 
     def get_results_path(self, epoch_index, batch_index):
         return (
             f"./Results/{self.attack_target}/batch-{self.attack_batch_size}/"
-            f"domain_{self.group_index}/results_{self.control_string_length}_"
+            f"domain_{self.domain_index}/results_{self.control_string_length}_"
             f"epoch_{epoch_index}_batch_{batch_index}.csv"
         )
 
@@ -81,7 +83,7 @@ def gcg_attack_batch(config, args, batch, epoch_index, batch_index):
 def run_epoch(args, epoch_index):
     config = Config(
         args.train_queries_path, args.attack_target, args.attack_batch_size,
-        args.group_index, args.control_string_length
+        args.domain_index, args.control_string_length
     )
     logging.info(f"Starting epoch {epoch_index}")
     batch_sampler = BatchSampler(config.train_queries_path, config.attack_batch_size)
@@ -91,12 +93,12 @@ def run_epoch(args, epoch_index):
 
 
 def merge_results(config, epoch_times):
-    combined_results_path = f"./Results/{config.attack_target}/batch-{config.attack_batch_size}/domain_{config.group_index}/combined_results_{config.control_string_length}.csv"
+    combined_results_path = f"./Results/{config.attack_target}/batch-{config.attack_batch_size}/domain_{config.domain_index}/combined_results_{config.control_string_length}.csv"
     os.makedirs(os.path.dirname(combined_results_path), exist_ok=True)
 
     all_dataframes = []
     for epoch_index in range(epoch_times):
-        epoch_dir = f"./Results/{config.attack_target}/batch-{config.attack_batch_size}/domain_{config.group_index}"
+        epoch_dir = f"./Results/{config.attack_target}/batch-{config.attack_batch_size}/domain_{config.domain_index}"
         for file in os.listdir(epoch_dir):
             if file.startswith(f"results_{config.control_string_length}_epoch_{epoch_index}"):
                 df = pd.read_csv(os.path.join(epoch_dir, file))
@@ -110,10 +112,10 @@ def merge_results(config, epoch_times):
         logging.warning("No results found to combine.")
 
 
-def gcg_attack_all(args, epoch_times=1):
+def gcg_attack(args, epoch_times=1):
     config = Config(
         args.train_queries_path, args.attack_target, args.attack_batch_size,
-        args.group_index, args.control_string_length
+        args.domain_index, args.control_string_length
     )
     if epoch_times > 1:
         with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
@@ -128,16 +130,14 @@ def gcg_attack_all(args, epoch_times=1):
 
 
 if __name__ == '__main__':
-    import argparse
-
     parser = argparse.ArgumentParser(description="Run GCG attack on a set of queries.")
     parser.add_argument("--train_queries_path", type=str, help="Path to the train queries file.")
     parser.add_argument("--attack_target", type=str, help="The target of the attack.")
     parser.add_argument("--attack_batch_size", type=int, help="Number of queries to attack in each batch.")
-    parser.add_argument("--group_index", type=int, help="Index of the group to attack.")
+    parser.add_argument("--domain_index", type=int, help="Index of the domain to attack.")
     parser.add_argument("--control_string_length", type=int, help="Length of the control string.")
     parser.add_argument("--target", type=str, help="The target of the attack.")
     parser.add_argument("--epoch_times", type=int, default=1, help="Number of epochs to run.")
     args = parser.parse_args()
 
-    gcg_attack_all(args, args.epoch_times)
+    gcg_attack(args, args.epoch_times)

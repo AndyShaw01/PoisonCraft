@@ -32,7 +32,6 @@ class GCG:
                 control_string_length (int): Length of the control string.
                 max_steps (int): Maximum number of steps.
                 max_attack_attempts (int): Maximum number of attack attempts.
-                max_prompts_in_single_attack (int): Maximum number of prompts in a single attack.
                 max_successful_prompt (int): Maximum number of successful prompts.
                 max_attack_steps (int): Maximum number of attack steps.
                 loss_threshold (float): Loss threshold.
@@ -65,7 +64,6 @@ class GCG:
         self.control_string_length = args.control_string_length
         self.max_steps = args.max_steps
         self.max_attack_attempts = args.max_attack_attempts
-        self.max_prompts_in_single_attack = args.max_prompts_in_single_attack
         self.max_successful_prompt = args.max_successful_prompt
         self.max_attack_steps = args.max_attack_steps
         self.loss_threshold = getattr(args, 'loss_threshold', 0.5)
@@ -191,7 +189,6 @@ if __name__ == "__main__":
     parser.add_argument("--control_string_length", type=int, default=5, help="Length of the control string")
     parser.add_argument("--max_steps", type=int, default=100, help="Maximum number of steps")
     parser.add_argument("--max_attack_attempts", type=int, default=3, help="Maximum number of attack attempts")
-    parser.add_argument("--max_prompts_in_single_attack", type=int, default=1, help="Maximum number of prompts in a single attack")
     parser.add_argument("--max_successful_prompt", type=int, default=1, help="Maximum number of successful prompts")
     parser.add_argument("--max_attack_steps", type=int, default=1000, help="Maximum number of attack steps")
     parser.add_argument("--loss_threshold", type=float, default=0.5, help="Loss threshold")
