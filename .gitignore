@@ -13,4 +13,5 @@ result
 baselines
 eval_result
 TestLLM
-experiments/eval*
+src/analysis
+src/transfer_attack
