@@ -22,7 +22,7 @@ def get_matched_bar(results_file_path, k):
         test_data = data[test_name]
         sorted_similarity = sorted(test_data.values(), reverse=True)
         if k < 0 or k >= len(sorted_similarity):
-            raise IndexError(f"Index {k} is out of bounds for '{testname}' with length {len(sorted_similarity)}.")
+            raise IndexError(f"Index {k} is out of bounds for '{test_name}' with length {len(sorted_similarity)}.")
         kth_similarity.append({
             'test_name': test_name,
             f'matched_bar_{k}': sorted_similarity[k]
@@ -38,7 +38,7 @@ def main(args):
 
     # Load the train queries
     queries_id = []
-    with open(args.test_queries_path, 'r') as f:
+    with open(args.target_queries_path, 'r') as f:
         for line in f:
             data = json.loads(line)
             queries_id.append(data['_id'])
@@ -52,7 +52,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Get the top-k similarity score for each test query')
     parser.add_argument('--results_file_path', type=str, default='./Dataset/nq/nq-contriever.json', help='The path to the beir evaluation results file')  
-    parser.add_argument('--test_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
+    parser.add_argument('--target_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
     parser.add_argument('--k', type=int, default=19, help='The number of top k results to consider')
     parser.add_argument('--domain', type=int, default=1, help='The category of the queries')
     parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco', 'nq'], default='nq', help='The dataset to process')

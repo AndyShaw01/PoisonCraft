@@ -44,8 +44,7 @@ def generate_selected_queries(id_file_path, target_file_path, output_file_path):
         for query in selected_queries:
             f.write(json.dumps(query) + "\n")
 
-
-if __name__ == "__main__":
+def main():
     datasets = ['nq', 'msmarco', 'hotpotqa']
     out_dir = os.path.join(os.getcwd(), "datasets_test")
 
@@ -53,8 +52,8 @@ if __name__ == "__main__":
     get_beir_datasets(datasets, out_dir)
 
     for dataset in datasets:
-        id_file_path = f"./Datasets/{dataset}/qrels/dev.tsv"
-        target_file_path = f"./Datasets/{dataset}/queries.jsonl"
+        id_file_path = f"./datasets_test/{dataset}/qrels/dev.tsv"
+        target_file_path = f"./datasets_test/{dataset}/queries.jsonl"
         output_file_path = f"./datasets_test/{dataset}/selected_queries.jsonl"
         
         # Generate selected_queries.jsonl
@@ -88,3 +87,7 @@ if __name__ == "__main__":
 
         print(f"Train-datasets size: {len(train_set)}")
         print(f"Test-datasets  size: {len(test_set)}")
+
+if __name__ == "__main__":
+
+    main()
