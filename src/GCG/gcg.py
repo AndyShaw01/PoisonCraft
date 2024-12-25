@@ -38,7 +38,7 @@ class GCG:
                 early_stop_iterations (int): Early stop iterations.
                 early_stop_local_optim (int): Early stop local optimization.
             - Batch settings:
-                attack_batch_size (int): Batch size used for attacks.
+                batch_size (int): Batch size used for attacks.
         device (torch.device): Device on which computations are performed.
         model (SentenceEmbeddingModel): The SentenceEmbeddingModel instance.
         tokenizer (AutoTokenizer): Tokenizer instance with specific padding settings.
@@ -69,7 +69,7 @@ class GCG:
         self.loss_threshold = getattr(args, 'loss_threshold', 0.5)
         self.early_stop_iterations = getattr(args, 'early_stop_iterations', 500)
         self.early_stop_local_optim = getattr(args, 'early_stop_local_optim', 100)
-        self.attack_batch_size = args.attack_batch_size
+        self.batch_size = args.batch_size
         self.no_space = False
 
         # Logging setup
@@ -105,7 +105,7 @@ class GCG:
         """
         Compute the initial loss between question and target embeddings.
         """
-        if self.attack_batch_size > 1:
+        if self.batch_size > 1:
             return get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
         return get_loss(question_embedding, target_embedding)
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     parser.add_argument("--loss_threshold", type=float, default=0.5, help="Loss threshold")
     parser.add_argument("--early_stop_iterations", type=int, default=500, help="Early stop iterations")
     parser.add_argument("--early_stop_local_optim", type=int, default=100, help="Early stop local optimization")
-    parser.add_argument("--attack_batch_size", type=int, default=1, help="Attack batch size")
+    parser.add_argument("--batch_size", type=int, default=1, help="Attack batch size")
     parser.add_argument("--save_path", type=str, default=None, help="Path to save results")
     parser.add_argument("--index", type=int, default=0, help="Index of the question")
     args = parser.parse_args()

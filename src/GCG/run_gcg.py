@@ -9,6 +9,7 @@ import argparse
 from gcg import GCG
 
 multiprocessing.set_start_method('spawn', force=True)
+console_lock = multiprocessing.Lock()
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(asctime)s: %(message)s')
 
@@ -18,22 +19,22 @@ class Config:
     Configuration class for the GCG attack.
 
     Attributes:
-        train_queries_path (str): Path to the train queries file.
+        shadow_queries_path (str): Path to the shadow queries file.
         attack_target (str): The target of the attack.
-        attack_batch_size (int): Number of queries to attack in each batch.
+        batch_size (int): Number of queries to attack in each batch.
         domain_index (int): Index of the domain to attack.
         control_string_length (int): Length of the control string.
     """
-    def __init__(self, train_queries_path, attack_target, attack_batch_size, domain_index, control_string_length):
-        self.train_queries_path = train_queries_path
+    def __init__(self, shadow_queries_path, attack_target, batch_size, domain_index, control_string_length):
+        self.shadow_queries_path = shadow_queries_path
         self.attack_target = attack_target
-        self.attack_batch_size = attack_batch_size
+        self.batch_size = batch_size
         self.domain_index = domain_index
         self.control_string_length = control_string_length
 
     def get_results_path(self, epoch_index, batch_index):
         return (
-            f"./Results/{self.attack_target}/batch-{self.attack_batch_size}/"
+            f"./Results/{self.attack_target}/batch-{self.batch_size}/"
             f"domain_{self.domain_index}/results_{self.control_string_length}_"
             f"epoch_{epoch_index}_batch_{batch_index}.csv"
         )
@@ -41,36 +42,60 @@ class Config:
 
 class BatchSampler:
     """
-    Batch sampler
+    Batch sampler, used to sample batches of shadow queries.
 
     Attributes:
-        train_queries_path (str): Path to the train queries file.
-        attack_batch_size (int): Number of queries to attack in each batch.
+        shadow_queries_path (str): Path to the shadow queries file.
+        batch_size (int): Number of queries to attack in each batch.
         queries_text (list): List of queries text.
     """
-    def __init__(self, train_queries_path, attack_batch_size):
-        self.train_queries_path = train_queries_path
-        self.attack_batch_size = attack_batch_size
+    def __init__(self, shadow_queries_path, batch_size):
+        self.shadow_queries_path = shadow_queries_path
+        self.batch_size = batch_size
         self.queries_text = []
         self._load_data()
 
     def _load_data(self):
-        with open(self.train_queries_path, 'r') as f:
+        with open(self.shadow_queries_path, 'r') as f:
             self.queries_text = [json.loads(line)['text'] for line in f]
 
     def __iter__(self):
         random.shuffle(self.queries_text)
-        for i in range(0, len(self.queries_text), self.attack_batch_size):
-            yield self.queries_text[i:i + self.attack_batch_size]
+        for i in range(0, len(self.queries_text), self.batch_size):
+            yield self.queries_text[i:i + self.batch_size]
 
 
 def save_results_path(config, epoch_index, batch_index):
+    """
+    Save the results path
+
+    Args:
+        config (Config): Configuration object
+        epoch_index (int): Index of the epoch
+        batch_index (int): Index of the batch
+
+    Returns:
+        str: Save path
+    """
     save_path = config.get_results_path(epoch_index, batch_index)
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     return save_path
 
 
 def gcg_attack_batch(config, args, batch, epoch_index, batch_index):
+    """
+    Run GCG attack on a batch of queries
+
+    Args:
+        config (Config): Configuration object
+        args (argparse.Namespace): Arguments
+        batch (list): List of queries
+        epoch_index (int): Index of the epoch
+        batch_index (int): Index of the batch
+
+    Returns:
+        None
+    """
     save_path = save_results_path(config, epoch_index, batch_index)
     args.save_path = save_path
     gcg = GCG(args)
@@ -81,24 +106,30 @@ def gcg_attack_batch(config, args, batch, epoch_index, batch_index):
 
 
 def run_epoch(args, epoch_index):
+    """
+    Run an epoch of the GCG attack
+    """
     config = Config(
-        args.train_queries_path, args.attack_target, args.attack_batch_size,
+        args.shadow_queries_path, args.attack_target, args.batch_size,
         args.domain_index, args.control_string_length
     )
     logging.info(f"Starting epoch {epoch_index}")
-    batch_sampler = BatchSampler(config.train_queries_path, config.attack_batch_size)
+    batch_sampler = BatchSampler(config.shadow_queries_path, config.batch_size)
     for batch_index, batch in enumerate(batch_sampler):
         gcg_attack_batch(config, args, batch, epoch_index, batch_index)
     logging.info(f"Epoch {epoch_index} completed.")
 
 
 def merge_results(config, epoch_times):
-    combined_results_path = f"./Results/{config.attack_target}/batch-{config.attack_batch_size}/domain_{config.domain_index}/combined_results_{config.control_string_length}.csv"
+    """
+    Merge the same control string length results into one file from different epochs
+    """
+    combined_results_path = f"./Results/{config.attack_target}/batch-{config.batch_size}/domain_{config.domain_index}/combined_results_{config.control_string_length}.csv"
     os.makedirs(os.path.dirname(combined_results_path), exist_ok=True)
 
     all_dataframes = []
     for epoch_index in range(epoch_times):
-        epoch_dir = f"./Results/{config.attack_target}/batch-{config.attack_batch_size}/domain_{config.domain_index}"
+        epoch_dir = f"./Results/{config.attack_target}/batch-{config.batch_size}/domain_{config.domain_index}"
         for file in os.listdir(epoch_dir):
             if file.startswith(f"results_{config.control_string_length}_epoch_{epoch_index}"):
                 df = pd.read_csv(os.path.join(epoch_dir, file))
@@ -113,16 +144,21 @@ def merge_results(config, epoch_times):
 
 
 def gcg_attack(args, epoch_times=1):
+    """
+    Run the GCG attack
+    """
     config = Config(
-        args.train_queries_path, args.attack_target, args.attack_batch_size,
+        args.shadow_queries_path, args.attack_target, args.batch_size,
         args.domain_index, args.control_string_length
     )
     if epoch_times > 1:
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-            for epoch_index in range(epoch_times):
-                pool.apply_async(run_epoch, args=(args, epoch_index))
-            pool.close()
-            pool.join()
+        processes = []
+        for epoch_index in range(epoch_times):
+            p = multiprocessing.Process(target=run_epoch, args=(args, epoch_index))
+            p.start()
+            processes.append(p)
+        for p in processes:
+            p.join()  # 设置超时时间，例如 600 秒
         logging.info("All epochs completed.")
         merge_results(config, epoch_times)
     else:
@@ -131,9 +167,9 @@ def gcg_attack(args, epoch_times=1):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run GCG attack on a set of queries.")
-    parser.add_argument("--train_queries_path", type=str, help="Path to the train queries file.")
+    parser.add_argument("--shadow_queries_path", type=str, help="Path to the train queries file.")
     parser.add_argument("--attack_target", type=str, help="The target of the attack.")
-    parser.add_argument("--attack_batch_size", type=int, help="Number of queries to attack in each batch.")
+    parser.add_argument("--batch_size", type=int, help="Number of queries to attack in each batch.")
     parser.add_argument("--domain_index", type=int, help="Index of the domain to attack.")
     parser.add_argument("--control_string_length", type=int, help="Length of the control string.")
     parser.add_argument("--target", type=str, help="The target of the attack.")
