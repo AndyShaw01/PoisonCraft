@@ -15,5 +15,3 @@ results_from_A800
 baselines
 eval_result
 TestLLM
-src/analysis
-src/transfer_attack
