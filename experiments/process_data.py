@@ -38,7 +38,7 @@ def main(args):
 
     # Load the train queries
     queries_id = []
-    with open(args.train_queries_path, 'r') as f:
+    with open(args.test_queries_path, 'r') as f:
         for line in f:
             data = json.loads(line)
             queries_id.append(data['_id'])
@@ -50,11 +50,11 @@ def main(args):
     print("The aligned results have been saved.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')
-    parser.add_argument('--results_file_path', type=str, default='./Dataset/nq/nq-contriever.json', help='The path to the results file')  
-    parser.add_argument('--train_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
+    parser = argparse.ArgumentParser(description='Get the top-k similarity score for each test query')
+    parser.add_argument('--results_file_path', type=str, default='./Dataset/nq/nq-contriever.json', help='The path to the beir evaluation results file')  
+    parser.add_argument('--test_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
     parser.add_argument('--k', type=int, default=19, help='The number of top k results to consider')
-    parser.add_argument('--category', type=int, default=1, help='The category of the queries')
+    parser.add_argument('--domain', type=int, default=1, help='The category of the queries')
     parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco', 'nq'], default='nq', help='The dataset to process')
     parser.add_argument('--retriever', choices=['contriever', 'contriever-msmarco', 'ance', 'openai','simcse', 'openai-002', 'openai_3-small','openai_3-large'], default='openai', help='The retriever to process')
 

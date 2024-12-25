@@ -5,6 +5,12 @@ import json
 import argparse
 import pdb
 def main(args):
+    """
+    Read the TSV file and remove duplicates, then select the queries with these query IDs from the JSONL file and save them to a new JSONL file.
+
+    Parameters:
+    args (argparse.Namespace): Namespace object containing command line arguments.
+    """
     # Read the TSV file and drop duplicates
     df = pd.read_csv(args.id_file_path, sep="\t")
     df = df.drop_duplicates(subset=["query-id"])
