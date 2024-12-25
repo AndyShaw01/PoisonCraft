@@ -1,8 +1,11 @@
 import os
+import sys
 import json
 import argparse
+import pdb
 from collections import Counter
 
+sys.path.append(os.path.abspath('../RAGInjection/'))
 from src.embedding.sentence_embedding import SentenceEmbeddingModel
 from src.utils import MODEL_CODE_TO_MODEL_NAME
 from src.utils import save_top_words_to_json
@@ -62,7 +65,7 @@ def main(args):
     token_frequency = Counter(tokenized_data)
 
     # Set the filter stopwords
-    stopwords = set(["the", "is", "and", "in", "to", "a", "of", "for", "on", "with", "by", "an", "it", "this"])  # Add more stopwords as needed
+    stopwords = set(["the", "is", "and", "in", "to", "a", "of", "for", "on", "with", "by", "an", "it", "this", "s", "'", "did"])  # Add more stopwords as needed
     filtered_tokens = filter_stopwords(token_frequency.keys(), stopwords)
     filtered_frequency = Counter({token: token_frequency[token] for token in filtered_tokens})
 
@@ -72,9 +75,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--shadow_dataset', type=str, default='./datasets/nq/', help='The folder of shadow datasets')
-    parser.add_argument('--result_file', type=str, default='./datasets/nq/shadow/frequency.csv', help='The result file of frequency of the original query in the shadow datasets')
-    parser.add_argument('--model_code', type=str, default='Contriever', help='The target model code')
+    parser.add_argument("--target_dataset", choices=['nq', 'hotpotqa', 'msmarco'], default='nq', help='The target dataset')
+    parser.add_argument('--shadow_dataset', type=str, default='./datasets/nq/shadow_queries.jsonl', help='The folder of shadow datasets')
+    parser.add_argument('--result_file', type=str, default='./datasets/nq/frequent_words.json', help='The result file of frequency of the original query in the shadow datasets')
+    parser.add_argument('--model_code', choices=['contriever', 'simcse', 'ance'], default='contriever', help='The target model code')
 
     args = parser.parse_args()
+    args.shawdow_dataset = './datasets/' + args.target_dataset + '/shadow_queries.jsonl'
+    args.result_file = './datasets/' + args.target_dataset + '/frequent_words.json'
     main(args)

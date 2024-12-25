@@ -1,6 +1,5 @@
 import sys
 import os
-import pdb
 
 sys.path.append(os.path.abspath('../RAGInjection/'))
 
@@ -28,13 +27,17 @@ if __name__ == "__main__":
     parser.add_argument("--attack_target", choices=['nq', 'hotpotqa', 'msmarco'], default='nq', help='The target dataset of the attack')
     # File Path Args
     parser.add_argument("--shadow_queries_path", type=str, help='The path to the shadow queries file') 
+    parser.add_argument("--freq_words_path", type=str, default="./datasets/",help='The path to the frequent words file')  
     parser.add_argument("--save_path", type=str, help='The path to save the result')
+    parser.add_argument("--model_path", type=str, help='The path to the retrieval model')
     
 
     args = parser.parse_args()
-    
-    freq_suffix = load_frequent_words_as_str(args.attack_target)
+
+    args.freq_words_path = f'./datasets/{args.attack_target}/frequent_words.json'
+    freq_suffix = load_frequent_words_as_str(args.freq_words_path)
     args.attack_info = args.inject_info + freq_suffix
+    
 
     gcg_attack(args)
 
