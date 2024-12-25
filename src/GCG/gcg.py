@@ -2,9 +2,8 @@ import time
 import torch
 import torch.nn.functional as F
 import numpy as np
-from transformers import AutoTokenizer
 import logging
-from gcg_utils import (
+from src.GCG.gcg_utils import (
     token_gradients,
     get_loss,
     filter_candidates,
@@ -12,7 +11,7 @@ from gcg_utils import (
     initialize_logging,
     get_nonascii_toks
 )
-from embedding.sentence_embedding import SentenceEmbeddingModel
+from src.embedding.sentence_embedding import SentenceEmbeddingModel
 
 class GCG:
     """

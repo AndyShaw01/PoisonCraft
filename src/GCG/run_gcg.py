@@ -5,8 +5,9 @@ import random
 import multiprocessing
 import logging
 import argparse
+import pdb
 
-from gcg import GCG
+from src.GCG.gcg import GCG
 
 multiprocessing.set_start_method('spawn', force=True)
 console_lock = multiprocessing.Lock()
@@ -101,7 +102,8 @@ def gcg_attack_batch(config, args, batch, epoch_index, batch_index):
     gcg = GCG(args)
     gcg.question = batch
     gcg.index = batch_index
-    gcg.run(args.target)
+    pdb.set_trace()
+    gcg.run(args.attack_info)
     logging.info(f"Epoch {epoch_index}, Batch {batch_index}: Results saved to {save_path}")
 
 
@@ -172,7 +174,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, help="Number of queries to attack in each batch.")
     parser.add_argument("--domain_index", type=int, help="Index of the domain to attack.")
     parser.add_argument("--control_string_length", type=int, help="Length of the control string.")
-    parser.add_argument("--target", type=str, help="The target of the attack.")
+    # parser.add_argument("--target", type=str, help="The target of the attack.")
     parser.add_argument("--epoch_times", type=int, default=1, help="Number of epochs to run.")
     args = parser.parse_args()
 
