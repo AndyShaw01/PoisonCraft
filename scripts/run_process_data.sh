@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 PYTHON_SCRIPT="Experiments/data_process.py"
 
 LOG_PATH="Logs/tmp_data/"

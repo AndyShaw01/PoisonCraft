@@ -26,7 +26,7 @@ do
             GPU_NUM=2
         fi
         bash $BASH_SCRIPT $DOMAIN_ID $CONTROL_LENGTH $GPU_NUM &
-        echo "Group $DOMAIN_ID is running on GPU $GPU_NUM"
+        echo "Domain $DOMAIN_ID is running on GPU $GPU_NUM"
     done
 done
 
