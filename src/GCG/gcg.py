@@ -5,7 +5,9 @@ import numpy as np
 import logging
 from src.GCG.gcg_utils import (
     token_gradients,
+    token_gradients_bp,
     get_loss,
+    get_loss_bp,
     filter_candidates,
     filter_candidates_hard,
     sample_control_tokens,
@@ -107,14 +109,40 @@ class GCG:
             cand = np.random.choice(cand_list, self.control_string_length)
             cand_str = ' '.join(cand)
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
-        return cand_str, cand_toks    
+        return cand_str, cand_toks   
+    
+    def sample_control(self, grad, control_toks, batch_size, topk=256, allow_non_ascii=False):
+        if not allow_non_ascii:
+            grad[:, self._nonascii_toks.to(grad.device)] = np.infty
+        
+        top_indices = (-grad).topk(topk, dim=1).indices
+        # print('Shape of top_indices:', top_indices.shape)
+
+        original_control_toks = control_toks.repeat(batch_size, 1)
+        new_token_pos = torch.arange(
+            0, 
+            len(control_toks), 
+            len(control_toks) / batch_size, 
+            device=grad.device
+        ).type(torch.int64)
+        # print('the shape of new_token_pos is: ', new_token_pos.shape)
+
+        new_token_val = torch.gather(
+            top_indices[new_token_pos], 1, 
+            torch.randint(0, topk, (batch_size, 1), device=grad.device)
+        )
+        # print('the shape of new_token_val is: ', new_token_val.shape)
+
+        new_control_toks = original_control_toks.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
+        return new_control_toks
 
     def attack_iteration(self, question_embedding, control_tokens, input_ids, control_slice):
         """
         Perform a single iteration of the attack.
         """
-        grad = token_gradients(self.model, input_ids, question_embedding, control_slice)
-        control_candidates = sample_control_tokens(grad, control_tokens, batch_size=128, topk=64, allow_non_ascii=False)
+        grad = token_gradients_bp(self.model, input_ids, question_embedding.detach(), control_slice)
+        averaged_grad = grad / grad.norm(dim=-1, keepdim=True)
+        control_candidates = self.sample_control(averaged_grad, control_tokens, batch_size=32, topk=64, allow_non_ascii=False)
         filtered_candidates = filter_candidates_hard(control_candidates, self.tokenizer, control_tokens)
         return filtered_candidates
 
@@ -141,8 +169,8 @@ class GCG:
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
 
             # Compute initial loss
-            # best_loss = get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
-            best_loss = get_loss(question_embedding, target_embedding, reduction='none')
+            # best_loss = get_loss(question_embedding, target_embedding, reduction='none')
+            best_loss = get_loss_bp(question_embedding, target_embedding, reduction="mean", dim=1)
             logging.info(f"Initial loss: {best_loss.item()}")
             local_optim_counter = 0
             for step in range(self.max_steps):
@@ -155,16 +183,28 @@ class GCG:
                     break
 
                 # Evaluate candidates
-                inputs = input_ids.repeat(len(filtered_candidates), 1)
-                for i, cand in enumerate(filtered_candidates):
-                    inputs[i, control_slice] = cand
-                with torch.no_grad():  
-                    candidate_embeddings = self.model(input_ids=inputs)
-                # losses = get_loss(question_embedding.unsqueeze(1), candidate_embeddings.unsqueeze(0), dim=0)
-                losses = get_loss(question_embedding, candidate_embeddings, mode='mse', reduction='none')
+                # inputs = input_ids.repeat(len(filtered_candidates), 1)
+                # for i, cand in enumerate(filtered_candidates):
+                #     inputs[i, control_slice] = cand
+                # with torch.no_grad():  
+                #     candidate_embeddings = self.model(input_ids=inputs)
+                # pdb.set_trace()
+                inputs = torch.tensor([], device=self.device)
+                for cand in filtered_candidates: # cand-len: 20
+                    tmp_input = input_ids.clone()
+                    tmp_input[control_slice] = cand
+                    if inputs.shape[0] == 0:
+                        inputs = tmp_input.unsqueeze(0) # [1, len]
+                    else:
+                        inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0) # [N, len]
+                # pdb.set_trace()
+                candidate_embeddings = self.model(input_ids=inputs)
+                # losses = get_loss(question_embedding, candidate_embeddings, mode='mse', reduction='none')
+                losses = get_loss_bp(question_embedding.unsqueeze(1), candidate_embeddings.unsqueeze(0), dim=2)
                 
-                best_idx = torch.argmin(losses)
-                curr_best_loss = losses[best_idx].item()
+                losses[torch.isnan(losses)] = 999999
+                curr_best_loss, best_idx = torch.min(losses, dim=0)
+                curr_best_control_tokens = filtered_candidates[best_idx]
 
                 if curr_best_loss < best_loss:
                     best_loss = curr_best_loss

@@ -112,6 +112,7 @@ def initialize_logging():
     )
 
 
+
 def token_gradients(model, input_ids, question_embedding, control_slice):
     """
     Computes gradients of the loss with respect to control tokens.
@@ -158,6 +159,50 @@ def token_gradients(model, input_ids, question_embedding, control_slice):
 
     return one_hot.grad.clone()
 
+def token_gradients_bp(model, input_ids, question_embedding, control_slice):
+    """
+    Computes gradients of the loss with respect to the coordinates.
+
+    Args:
+        model: The model to compute the gradients with respect to.
+        input_ids: The input ids.
+        question_embedding: The question embedding to calculate the loss
+        control_slice: The slice of the input to compute the gradients with respect to.
+    """
+    embed_weights = get_embedding_weight(model)
+    one_hot = torch.zeros(
+        input_ids[control_slice].shape[0],
+        embed_weights.shape[0],
+        device=model.device,
+        dtype=embed_weights.dtype
+    )
+    one_hot.scatter_(
+        1,
+        input_ids[control_slice].unsqueeze(1),
+        torch.ones(one_hot.shape[0], 1, device=model.device, dtype=embed_weights.dtype)
+    )
+    one_hot.requires_grad_()
+    input_embeds = (one_hot @ embed_weights).unsqueeze(0)
+
+    # now sitich it togethor with the rest of the embeddings
+    embeds = get_embeddings(model, input_ids.unsqueeze(0)).detach()
+    full_embeds = torch.cat(
+        [
+            embeds[:, :control_slice.start, :],
+            input_embeds,
+            embeds[:, control_slice.stop:, :]
+        ],
+        dim=1
+    )
+    sentence_embedding = model(inputs_embeds=full_embeds)
+
+    cosine_similarity = F.cosine_similarity(sentence_embedding, question_embedding)
+    loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=model.device))
+    loss.backward()
+
+    return one_hot.grad.clone()
+
+
 def get_loss(question_embedding, target_embedding, mode='mse', reduction='none'):
     """
     Compute loss between query and target embedding(s).
@@ -187,6 +232,30 @@ def get_loss(question_embedding, target_embedding, mode='mse', reduction='none')
 
     return loss
 
+
+def get_loss_bp(question_embedding, target_embeddings, mode='mse',reduction='none', dim=1):
+        """
+        get the loss between the question embedding and the target embeddings
+
+        Parameters
+        ----------
+        question_embedding : torch.tensor
+            The question embedding, [sentence_embedding_dim]
+        target_embeddings : torch.tensor
+            The target embeddings, 
+        
+        Returns
+        -------
+        torch.tensor
+            The loss between the question embedding and the target embeddings
+        """
+        cosine_similarity = F.cosine_similarity(question_embedding, target_embeddings, dim=dim) if dim == 1 else F.cosine_similarity(question_embedding, target_embeddings, dim=dim).mean(dim=0)
+        label = torch.ones_like(cosine_similarity, device=question_embedding.device)
+        if mode == 'mse':
+            loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
+        else:
+            ValueError("The mode is not supported")
+        return loss
 def filter_candidates_hard(control_cand, tokenizer, curr_control=None):
         """
         filter input candidates
@@ -257,6 +326,30 @@ def filter_candidates(control_cand, tokenizer, curr_control):
     logging.warning(f"{not_valid_ratio:.2%} of control candidates were invalid.")
     return cands
 
+def sample_control(self, grad, control_toks, batch_size, topk=256, allow_non_ascii=False):
+        if not allow_non_ascii:
+            grad[:, self._nonascii_toks.to(grad.device)] = np.infty
+        
+        top_indices = (-grad).topk(topk, dim=1).indices
+        # print('Shape of top_indices:', top_indices.shape)
+
+        original_control_toks = control_toks.repeat(batch_size, 1)
+        new_token_pos = torch.arange(
+            0, 
+            len(control_toks), 
+            len(control_toks) / batch_size, 
+            device=grad.device
+        ).type(torch.int64)
+        # print('the shape of new_token_pos is: ', new_token_pos.shape)
+
+        new_token_val = torch.gather(
+            top_indices[new_token_pos], 1, 
+            torch.randint(0, topk, (batch_size, 1), device=grad.device)
+        )
+        # print('the shape of new_token_val is: ', new_token_val.shape)
+
+        new_control_toks = original_control_toks.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
+        return new_control_toks
 
 def sample_control_tokens(grad, control_tokens, batch_size=128, topk=64, allow_non_ascii=False):
     """
