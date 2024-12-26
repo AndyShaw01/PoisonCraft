@@ -114,7 +114,7 @@ def create_model(model_path):
 
 # Model utility functions
 def cosine_similarity(query_embeddings, doc_embeddings):
-    """ Transfer to English Verison
+    """ 
     Calculate the cosine similarity between multiple queries and multiple documents.
 
     Args:
