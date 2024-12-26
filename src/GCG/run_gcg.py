@@ -102,7 +102,6 @@ def gcg_attack_batch(config, args, batch, epoch_index, batch_index):
     gcg = GCG(args)
     gcg.question = batch
     gcg.index = batch_index
-    pdb.set_trace()
     gcg.run(args.attack_info)
     logging.info(f"Epoch {epoch_index}, Batch {batch_index}: Results saved to {save_path}")
 

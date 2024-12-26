@@ -7,12 +7,15 @@ from src.GCG.gcg_utils import (
     token_gradients,
     get_loss,
     filter_candidates,
+    filter_candidates_hard,
     sample_control_tokens,
     initialize_logging,
-    get_nonascii_toks
+    get_nonascii_toks,
+    get_fixed_list
 )
 from src.embedding.sentence_embedding import SentenceEmbeddingModel
 
+import pdb
 class GCG:
     """
     GCG Attack Class.
@@ -49,7 +52,7 @@ class GCG:
     Returns:
         GCG: The GCG attack instance
     """
-    def __init__(self, args):
+    def __init__(self, args, question=None):
         self.args = args
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -66,7 +69,8 @@ class GCG:
         self.max_successful_prompt = args.max_successful_prompt
         self.max_attack_steps = args.max_attack_steps
         self.loss_threshold = getattr(args, 'loss_threshold', 0.5)
-        self.early_stop_iterations = getattr(args, 'early_stop_iterations', 500)
+        self.early_stop = getattr(args, 'early_stop', True)
+        self.early_stop_iterations = getattr(args, 'early_stop_iterations', 300)
         self.early_stop_local_optim = getattr(args, 'early_stop_local_optim', 100)
         self.batch_size = args.batch_size
         self.no_space = False
@@ -79,6 +83,8 @@ class GCG:
         self.result_file = args.save_path or f'results-{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}.csv'
         self.result_writer = self._initialize_result_writer()
 
+        self.question = question
+
     def _initialize_result_writer(self):
         """Initialize the result CSV writer."""
         import csv
@@ -87,26 +93,21 @@ class GCG:
         writer.writerow(['index', 'question', 'control_suffix', 'loss', 'attack_steps', 'attack_attempt'])
         return writer
 
-    def init_adv_postfix(self, random=True):
+    def init_adv_postfix(self, random=False):
         """
         Generate a fixed control string of the given length.
         """
-        cand_list = ['when', 'the', 'of', 'and', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by'] if random else []
-        while True:
+        cand_toks = []
+        while len(cand_toks) != self.control_string_length:
+            if random:
+                cand_list = ['when', 'the', 'of', 'and', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by',
+                             'this', 'with', 'it', 'from', 'at', 'are', 'as', 'be', 'was']
+            else:
+                cand_list = get_fixed_list(self.args.model_path)
             cand = np.random.choice(cand_list, self.control_string_length)
             cand_str = ' '.join(cand)
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
-            if len(cand_toks) == self.control_string_length:
-                break
-        return cand_str, cand_toks
-
-    def compute_initial_loss(self, question_embedding, target_embedding):
-        """
-        Compute the initial loss between question and target embeddings.
-        """
-        if self.batch_size > 1:
-            return get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
-        return get_loss(question_embedding, target_embedding)
+        return cand_str, cand_toks    
 
     def attack_iteration(self, question_embedding, control_tokens, input_ids, control_slice):
         """
@@ -114,7 +115,7 @@ class GCG:
         """
         grad = token_gradients(self.model, input_ids, question_embedding, control_slice)
         control_candidates = sample_control_tokens(grad, control_tokens, batch_size=128, topk=64, allow_non_ascii=False)
-        filtered_candidates = filter_candidates(control_candidates, self.tokenizer, control_tokens)
+        filtered_candidates = filter_candidates_hard(control_candidates, self.tokenizer, control_tokens)
         return filtered_candidates
 
     def run(self, target):
@@ -130,43 +131,48 @@ class GCG:
 
             # Initialize control tokens
             control_str, control_tokens = self.init_adv_postfix()
+            
             curr_prompt = f"{target} {control_str}" if not self.no_space else f"{target}{control_str}"
             input_ids = torch.tensor(self.tokenizer(curr_prompt).input_ids, device=self.device)
             control_slice = slice(-self.control_string_length, None)
+            control_tokens = torch.tensor(control_tokens, device=self.device)
 
-            question_embedding = self.model(self.args.question).detach()
+            question_embedding = self.model(sentences=self.question).detach()
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
 
             # Compute initial loss
-            best_loss = self.compute_initial_loss(question_embedding, target_embedding)
+            # best_loss = get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
+            best_loss = get_loss(question_embedding, target_embedding, reduction='none')
             logging.info(f"Initial loss: {best_loss.item()}")
-
             local_optim_counter = 0
             for step in range(self.max_steps):
-                if step > self.early_stop_iterations and best_loss > self.loss_threshold:
-                    logging.info(f"Early stop at step {step}: loss did not improve.")
+                if self.early_stop and step > self.early_stop_iterations and local_optim_counter > self.early_stop_local_optim :
+                    logging.info(f"Early stop at step {step}: local optimization stagnated.")
                     break
-
                 filtered_candidates = self.attack_iteration(question_embedding, control_tokens, input_ids, control_slice)
                 if not filtered_candidates:
                     logging.warning("No valid candidates found. Stopping iteration.")
                     break
 
                 # Evaluate candidates
-                candidate_embeddings = torch.stack([self.model(input_ids=cid.unsqueeze(0)).squeeze(0) for cid in filtered_candidates])
-                losses = get_loss(question_embedding, candidate_embeddings)
+                inputs = input_ids.repeat(len(filtered_candidates), 1)
+                for i, cand in enumerate(filtered_candidates):
+                    inputs[i, control_slice] = cand
+                with torch.no_grad():  
+                    candidate_embeddings = self.model(input_ids=inputs)
+                # losses = get_loss(question_embedding.unsqueeze(1), candidate_embeddings.unsqueeze(0), dim=0)
+                losses = get_loss(question_embedding, candidate_embeddings, mode='mse', reduction='none')
+                
                 best_idx = torch.argmin(losses)
                 curr_best_loss = losses[best_idx].item()
 
                 if curr_best_loss < best_loss:
                     best_loss = curr_best_loss
                     control_tokens = filtered_candidates[best_idx]
+                    local_optim_counter = 0
                     logging.info(f"Step {step}: Updated best loss to {best_loss}")
                 else:
                     local_optim_counter += 1
-                    if local_optim_counter >= self.early_stop_local_optim:
-                        logging.info("Local optimization stagnated. Stopping iteration.")
-                        break
 
                 attack_steps += 1
                 self.model.zero_grad()

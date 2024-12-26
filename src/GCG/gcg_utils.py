@@ -1,4 +1,8 @@
+import pdb
 import torch
+import torch.nn.functional as F
+import numpy as np
+import logging
 
 from transformers import (BertModel, RobertaModel, T5EncoderModel, MPNetModel)
 from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
@@ -97,10 +101,7 @@ def get_fixed_list(model_path):
     else:
         raise ValueError(f"Unknown model type: {model_path}")
     
-import torch
-import torch.nn.functional as F
-import numpy as np
-import logging
+
 
 def initialize_logging():
     """Initialize the logging configuration."""
@@ -124,7 +125,7 @@ def token_gradients(model, input_ids, question_embedding, control_slice):
     Returns:
         Gradients with respect to control tokens.
     """
-    embed_weights = model.get_input_embeddings().weight
+    embed_weights = get_embedding_weight(model)
     one_hot = torch.zeros(
         input_ids[control_slice].shape[0],
         embed_weights.shape[0],
@@ -140,7 +141,7 @@ def token_gradients(model, input_ids, question_embedding, control_slice):
     input_embeds = (one_hot @ embed_weights).unsqueeze(0)
 
     # Combine with the rest of the embeddings
-    embeds = model.get_input_embeddings()(input_ids.unsqueeze(0)).detach()
+    embeds = get_embeddings(model, input_ids.unsqueeze(0)).detach()
     full_embeds = torch.cat(
         [
             embeds[:, :control_slice.start, :],
@@ -149,38 +150,84 @@ def token_gradients(model, input_ids, question_embedding, control_slice):
         ],
         dim=1
     )
-    sentence_embedding = model(inputs_embeds=full_embeds).pooler_output
+    sentence_embedding = model(inputs_embeds=full_embeds)
     cosine_similarity = F.cosine_similarity(sentence_embedding, question_embedding)
-    loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=model.device))
-    loss.backward()
+    target = torch.ones_like(cosine_similarity, device=model.device)
+    loss = F.mse_loss(cosine_similarity, target)
+    loss.backward() 
 
     return one_hot.grad.clone()
 
-
-def get_loss(question_embedding, target_embeddings, mode='mse', reduction='none', dim=1):
+def get_loss(question_embedding, target_embedding, mode='mse', reduction='none'):
     """
-    Compute loss between question embedding and target embeddings.
+    Compute loss between query and target embedding(s).
 
     Args:
-        question_embedding: Embedding of the query/question.
-        target_embeddings: Embeddings of the target or candidates.
+        question_embedding: Query embeddings. Shape: [N, 768] or [4, 768].
+        target_embedding: Target embeddings. Shape: [4, 768] or [1, 768].
         mode: Type of loss function ('mse' by default).
-        reduction: Reduction method ('none' or 'mean').
-        dim: Dimension for cosine similarity.
+        reduction: Reduction method ('none', 'mean', etc.).
+        dim: Dimension for cosine similarity (1 for direct, 2 for batch).
 
     Returns:
-        Computed loss tensor.
+        Computed loss tensor or scalar.
     """
     cosine_similarity = F.cosine_similarity(
-        question_embedding, target_embeddings, dim=dim
-    ) if dim == 1 else F.cosine_similarity(question_embedding, target_embeddings, dim=dim).mean(dim=0)
-    label = torch.ones_like(cosine_similarity, device=question_embedding.device)
+        question_embedding.unsqueeze(0),    # [1, 4, 768]
+        target_embedding.unsqueeze(1),   # [N, 1, 768]
+        dim=2
+    ) 
+    mean_sim = cosine_similarity.mean(dim=1)
+    label = torch.ones_like(mean_sim, device=mean_sim.device)
 
     if mode == 'mse':
-        return F.mse_loss(cosine_similarity, label, reduction=reduction)
+        loss = F.mse_loss(mean_sim, label, reduction=reduction)
     else:
         raise ValueError(f"Unsupported loss mode: {mode}")
 
+    return loss
+
+def filter_candidates_hard(control_cand, tokenizer, curr_control=None):
+        """
+        filter input candidates
+
+        Args:
+            control_cand : list
+                The list of control tokens
+            tokenizer : object
+                The tokenizer object
+            curr_control : list
+                the current control token ids
+        """
+        if curr_control is None:
+            raise Exception('Please provide the current control token ids')
+        cands, count = [], 0
+        for i in range(control_cand.shape[0]):
+            try:
+                decoded_str = tokenizer.decode(control_cand[i], skip_special_tokens=True)
+                # print("decoded_str": decoded_str)
+                encoded_toks = tokenizer(decoded_str, add_special_tokens=False).input_ids
+                encoded_toks = torch.tensor(encoded_toks, device=control_cand.device)
+
+                if len(control_cand[i]) == len(encoded_toks) and not torch.all(torch.eq(control_cand[i], curr_control)):
+                    # Important! add this to mitagate the situation that the encoded_tok is not equal to the origin one
+                    if torch.all(torch.eq(control_cand[i], encoded_toks)):
+                        cands.append(control_cand[i])
+                    else:
+                        count += 1
+                else:
+                    count += 1
+            except IndexError:
+                logging.error(f"IndexError: piece id is out of range for candidate at index {i}")
+                count += 1
+        not_valid_ratio = round(count / len(control_cand), 2)            
+        logging.warning(f"Warning: {not_valid_ratio} control candidates were not valid")
+
+        if not_valid_ratio > 0.1 and cands != []:
+            cands = cands + [cands[-1]] * (len(control_cand) - len(cands))
+        elif cands == []:
+            print("All the control candidates are not valid. Please check the initial control string.")
+        return cands
 
 def filter_candidates(control_cand, tokenizer, curr_control):
     """
