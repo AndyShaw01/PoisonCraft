@@ -1,8 +1,4 @@
-import pdb
 import torch
-import torch.nn.functional as F
-import numpy as np
-import logging
 
 from transformers import (BertModel, RobertaModel, T5EncoderModel, MPNetModel)
 from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
@@ -12,85 +8,47 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
 import time
 from src.embedding.sentence_embedding import SentenceEmbeddingModel
 
-def token_gradients(model, input_ids, question_embedding, control_slice):
-    """
-    Computes gradients of the loss with respect to the coordinates.
-
-    Args:
-        model: The model to compute the gradients with respect to.
-        input_ids: The input ids.
-        question_embedding: The question embedding to calculate the loss
-        control_slice: The slice of the input to compute the gradients with respect to.
-    """
-    embed_weights = get_embedding_weight(model)
-    one_hot = torch.zeros(
-        input_ids[control_slice].shape[0],
-        embed_weights.shape[0],
-        device=model.device,
-        dtype=embed_weights.dtype
-    )
-    one_hot.scatter_(
-        1,
-        input_ids[control_slice].unsqueeze(1),
-        torch.ones(one_hot.shape[0], 1, device=model.device, dtype=embed_weights.dtype)
-    )
-    one_hot.requires_grad_()
-    input_embeds = (one_hot @ embed_weights).unsqueeze(0)
-
-    # now sitich it togethor with the rest of the embeddings
-    embeds = get_embeddings(model, input_ids.unsqueeze(0)).detach()
-    full_embeds = torch.cat(
-        [
-            embeds[:, :control_slice.start, :],
-            input_embeds,
-            embeds[:, control_slice.stop:, :]
-        ],
-        dim=1
-    )
-    sentence_embedding = model(inputs_embeds=full_embeds)
-
-    cosine_similarity = F.cosine_similarity(sentence_embedding, question_embedding)
-    loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=model.device))
-    loss.backward()
-
-    return one_hot.grad.clone()
-
-def get_nonascii_toks(tokenizer, device='cpu'):
+def get_nonascii_toks(model_path, tokenizer, device='cpu'):
 
     def is_ascii(s):
         return s.isascii() and s.isprintable()
-    
+
     non_ascii_toks = []
     ascii_toks = []
-    for i in range(tokenizer.vocab_size):
-        try:
-            token = tokenizer.decode([i])
-        except:
-            token = ''
-        
-        if not is_ascii(token):
-            non_ascii_toks.append(i)
-        else:
-            ascii_toks.append(i)
-    special_tokens = [
-        tokenizer.bos_token_id,
-        tokenizer.eos_token_id,
-        tokenizer.pad_token_id,
-        tokenizer.unk_token_id
-    ]
-    for tok in special_tokens:
-        if tok is not None and tok not in non_ascii_toks:
-            non_ascii_toks.append(tok)
+    if 'Llama-2' in model_path:
+        # append 0 to 259
+        non_ascii_toks = list(range(3, 259))
+        for i in range(259, tokenizer.vocab_size):
+            if not is_ascii(tokenizer.decode([i])):
+                non_ascii_toks.append(i)
+            else:
+                ascii_toks.append(i)
+    elif 'mpt' in model_path:
+        for i in range(2, tokenizer.vocab_size):
+            if not is_ascii(tokenizer.decode([i])):
+                non_ascii_toks.append(i)
+            else:
+                ascii_toks.append(i)
+    elif 'gemma' in model_path:
+        # append 4 to 107
+        non_ascii_toks = list(range(4, 107))
+        for i in range(107, tokenizer.vocab_size):
+            if not is_ascii(tokenizer.decode([i])):
+                non_ascii_toks.append(i)
+            else:
+                ascii_toks.append(i)
+    
+    if tokenizer.bos_token_id is not None:
+        non_ascii_toks.append(tokenizer.bos_token_id)
+    if tokenizer.eos_token_id is not None:
+        non_ascii_toks.append(tokenizer.eos_token_id)
+    if tokenizer.pad_token_id is not None:
+        non_ascii_toks.append(tokenizer.pad_token_id)
+    if tokenizer.unk_token_id is not None:
+        non_ascii_toks.append(tokenizer.unk_token_id)
+    
     return torch.tensor(non_ascii_toks, device=device), torch.tensor(ascii_toks, device=device)
 
-def initialize_logging():
-    """Initialize the logging configuration."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='[%(levelname)s] %(asctime)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    
 def get_embedding_weight(model):
     """
     Creates the batch of target texts with -1 placed at the end of the sequences for padding (for masking out the loss)
