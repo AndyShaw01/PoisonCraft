@@ -84,7 +84,7 @@ def get_embeddings(model, input_ids):
             return model.embeddings.word_embeddings(input_ids).half()
     else:
         raise ValueError(f"Unknown model type: {type(model)}")
-
+ 
 def get_fixed_list(model_path):
     if 'MPNetModel' in model_path:
         return ['!']

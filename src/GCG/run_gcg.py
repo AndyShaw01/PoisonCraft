@@ -24,19 +24,19 @@ class Config:
         attack_target (str): The target of the attack.
         batch_size (int): Number of queries to attack in each batch.
         domain_index (int): Index of the domain to attack.
-        control_string_length (int): Length of the control string.
+        adv_string_length (int): Length of the adversarial string.
     """
-    def __init__(self, shadow_queries_path, attack_target, batch_size, domain_index, control_string_length):
+    def __init__(self, shadow_queries_path, attack_target, batch_size, domain_index, adv_string_length):
         self.shadow_queries_path = shadow_queries_path
         self.attack_target = attack_target
         self.batch_size = batch_size
         self.domain_index = domain_index
-        self.control_string_length = control_string_length
+        self.adv_string_length = adv_string_length
 
     def get_results_path(self, epoch_index, batch_index):
         return (
             f"./Results/{self.attack_target}/batch-{self.batch_size}/"
-            f"domain_{self.domain_index}/results_{self.control_string_length}_"
+            f"domain_{self.domain_index}/results_{self.adv_string_length}_"
             f"epoch_{epoch_index}_batch_{batch_index}.csv"
         )
 
@@ -112,7 +112,7 @@ def run_epoch(args, epoch_index):
     """
     config = Config(
         args.shadow_queries_path, args.attack_target, args.batch_size,
-        args.domain_index, args.control_string_length
+        args.domain_index, args.adv_string_length
     )
     logging.info(f"Starting epoch {epoch_index}")
     batch_sampler = BatchSampler(config.shadow_queries_path, config.batch_size)
@@ -123,16 +123,16 @@ def run_epoch(args, epoch_index):
 
 def merge_results(config, epoch_times):
     """
-    Merge the same control string length results into one file from different epochs
+    Merge the same adversarial string length results into one file from different epochs
     """
-    combined_results_path = f"./Results/{config.attack_target}/batch-{config.batch_size}/domain_{config.domain_index}/combined_results_{config.control_string_length}.csv"
+    combined_results_path = f"./Results/{config.attack_target}/batch-{config.batch_size}/domain_{config.domain_index}/combined_results_{config.adv_string_length}.csv"
     os.makedirs(os.path.dirname(combined_results_path), exist_ok=True)
 
     all_dataframes = []
     for epoch_index in range(epoch_times):
         epoch_dir = f"./Results/{config.attack_target}/batch-{config.batch_size}/domain_{config.domain_index}"
         for file in os.listdir(epoch_dir):
-            if file.startswith(f"results_{config.control_string_length}_epoch_{epoch_index}"):
+            if file.startswith(f"results_{config.adv_string_length}_epoch_{epoch_index}"):
                 df = pd.read_csv(os.path.join(epoch_dir, file))
                 all_dataframes.append(df)
 
@@ -150,7 +150,7 @@ def gcg_attack(args, epoch_times=1):
     """
     config = Config(
         args.shadow_queries_path, args.attack_target, args.batch_size,
-        args.domain_index, args.control_string_length
+        args.domain_index, args.adv_string_length
     )
     if epoch_times > 1:
         processes = []
@@ -172,7 +172,7 @@ if __name__ == '__main__':
     parser.add_argument("--attack_target", type=str, help="The target of the attack.")
     parser.add_argument("--batch_size", type=int, help="Number of queries to attack in each batch.")
     parser.add_argument("--domain_index", type=int, help="Index of the domain to attack.")
-    parser.add_argument("--control_string_length", type=int, help="Length of the control string.")
+    parser.add_argument("--adv_string_length", type=int, help="Length of the control string.")
     # parser.add_argument("--target", type=str, help="The target of the attack.")
     parser.add_argument("--epoch_times", type=int, default=1, help="Number of epochs to run.")
     args = parser.parse_args()

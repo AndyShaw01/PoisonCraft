@@ -13,48 +13,7 @@ from src.GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embed
 
 from src.embedding.sentence_embedding import SentenceEmbeddingModel
 
-def token_gradients(model, input_ids, question_embedding, control_slice):
-    """
-    Computes gradients of the loss with respect to the coordinates.
-
-    Args:
-        model: The model to compute the gradients with respect to.
-        input_ids: The input ids.
-        question_embedding: The question embedding to calculate the loss
-        control_slice: The slice of the input to compute the gradients with respect to.
-    """
-    embed_weights = get_embedding_weight(model)
-    one_hot = torch.zeros(
-        input_ids[control_slice].shape[0],
-        embed_weights.shape[0],
-        device=model.device,
-        dtype=embed_weights.dtype
-    )
-    one_hot.scatter_(
-        1,
-        input_ids[control_slice].unsqueeze(1),
-        torch.ones(one_hot.shape[0], 1, device=model.device, dtype=embed_weights.dtype)
-    )
-    one_hot.requires_grad_()
-    input_embeds = (one_hot @ embed_weights).unsqueeze(0)
-
-    # now sitich it togethor with the rest of the embeddings
-    embeds = get_embeddings(model, input_ids.unsqueeze(0)).detach()
-    full_embeds = torch.cat(
-        [
-            embeds[:, :control_slice.start, :],
-            input_embeds,
-            embeds[:, control_slice.stop:, :]
-        ],
-        dim=1
-    )
-    sentence_embedding = model(inputs_embeds=full_embeds)
-
-    cosine_similarity = F.cosine_similarity(sentence_embedding, question_embedding)
-    loss = F.mse_loss(cosine_similarity, torch.tensor([1.0], device=model.device))
-    loss.backward()
-
-    return one_hot.grad.clone()
+MAX_LOSS = 999999
 
 class GCG:
     """
@@ -71,7 +30,7 @@ class GCG:
                 save_path (str): Path to save results.
                 index (int): Index of the question.
             - Attack configuration:
-                control_string_length (int): Length of the control string.
+                adv_string_length (int): Length of the adversarial string.
                 max_steps (int): Maximum number of steps.
                 max_attack_attempts (int): Maximum number of attack attempts.
                 max_successful_prompt (int): Maximum number of successful prompts.
@@ -103,7 +62,7 @@ class GCG:
         self.tokenizer.pad_token = self.tokenizer.eos_token if self.tokenizer.pad_token is None else self.tokenizer.pad_token
         
         # Attack parameters
-        self.control_string_length = args.control_string_length
+        self.adv_string_length = args.adv_string_length
         self.question = args.question
         self.max_steps = args.max_steps
         self.max_attack_attempts = args.max_attack_attempts
@@ -138,27 +97,27 @@ class GCG:
         import csv
         fp = open(self.result_file, 'w', buffering=1)
         writer = csv.writer(fp)
-        writer.writerow(['index', 'question', 'control_suffix', 'loss', 'attack_steps', 'attack_attempt'])
+        writer.writerow(['index', 'question', 'adv_suffix', 'loss', 'attack_steps', 'attack_attempt'])
         return writer
 
     def init_adv_suffix(self, random=True):
         """
-        generate a fixed control string with the given length
-        the control tokens can be randomly sampled from the following list
+        generate a fixed adversarial string with the given length
+        the adversarial tokens can be randomly sampled from the following list
         """
         cand_toks = []
-        while len(cand_toks) != self.control_string_length:
+        while len(cand_toks) != self.adv_string_length:
             if random:
                 cand_list = ['when', 'the', 'of', 'and', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by',
                              'this', 'with', 'it', 'from', 'at', 'are', 'as', 'be', 'was']
             else:
                 cand_list = get_fixed_list(self.args.model_path)
-            cand = np.random.choice(cand_list, self.control_string_length)
+            cand = np.random.choice(cand_list, self.adv_string_length)
             cand_str = ' '.join(cand)
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
         return cand_str, cand_toks
 
-    def get_loss(self, question_embedding, target_embeddings, mode='mse',reduction='none', dim=1):
+    def get_loss(self, question_embedding, target_embedding, mode='mse', reduction='none'):
         """
         Compute loss between query and target embedding(s).
 
@@ -172,115 +131,49 @@ class GCG:
         Returns:
             Computed loss tensor or scalar.
         """
-        cosine_similarity = F.cosine_similarity(question_embedding, target_embeddings, dim=dim) if dim == 1 else F.cosine_similarity(question_embedding, target_embeddings, dim=dim).mean(dim=0)
-        label = torch.ones_like(cosine_similarity, device=self.model.device)
+        cosine_similarity = F.cosine_similarity(
+            question_embedding.unsqueeze(0),    # [1, 4, 768]
+            target_embedding.unsqueeze(1),   # [N, 1, 768]
+            dim=2
+        ) 
+        mean_sim = cosine_similarity.mean(dim=1)
+        label = torch.ones_like(mean_sim, device=mean_sim.device)
+
         if mode == 'mse':
-            loss = F.mse_loss(cosine_similarity, label, reduction=reduction)
+            loss = F.mse_loss(mean_sim, label, reduction=reduction)
         else:
-            ValueError("The mode is not supported")
+            raise ValueError(f"Unsupported loss mode: {mode}")
+
         return loss
-
-    def get_filtered_cands_ance(self, control_cand, tokenizer, curr_control=None):
-        """
-        Filter input candidates with adjusted logic.
-
-        Parameters
-        ----------
-        control_cand : torch.Tensor
-            The list of control tokens (shape: [num_candidates, token_length])
-        tokenizer : object
-            The tokenizer object
-        curr_control : torch.Tensor
-            The current control token ids (shape: [token_length])
-
-        Returns
-        -------
-        list of torch.Tensor
-            The filtered list of control token tensors.
-        """
-        import logging
-
-        if curr_control is None:
-            raise Exception('Please provide the current control token ids')
-
-        cands, count = [], 0
-        for i in range(control_cand.shape[0]):
-            try:
-                decoded_str = tokenizer.decode(control_cand[i], skip_special_tokens=True)
-                # print(f"Candidate {i}: Decoded string: '{decoded_str}'")
-
-                # Basic validity check: non-empty string
-                if decoded_str.strip() == "":
-                    count += 1
-                    print(f"Candidate {i} is invalid because decoded string is empty.")
-                    continue
-
-                # Optionally, add more conditions based on your requirements
-                # For example, minimum length, presence of certain characters, etc.
-
-                # Check if the candidate is different from the current control
-                if not tokenizer.decode(curr_control, skip_special_tokens=True).strip() == decoded_str.strip():
-                    cands.append(control_cand[i])
-                    # print(f"Candidate {i} is valid and added to cands.")
-                else:
-                    count += 1
-                    print(f"Candidate {i} is invalid because it is identical to curr_control.")
-
-            except IndexError:
-                logging.error(f"IndexError: piece id is out of range for candidate at index {i}")
-                count += 1
-            except Exception as e:
-                logging.error(f"Unexpected error for candidate {i}: {e}")
-                count += 1
-
-        not_valid_ratio = round(count / len(control_cand), 2)
-        logging.warning(f"Warning: {not_valid_ratio} control candidates were not valid")
-
-        if not_valid_ratio > 0.1 and cands:
-            # Replicate the last valid candidate to match the required length
-            cands = cands + [cands[-1]] * (len(control_cand) - len(cands))
-            print(f"Filtered cands are less than control_cand. Replicating the last candidate to match the length.")
-        elif not cands:
-            print("All the control candidates are not valid. Please check the initial control string.")
-            # Optionally, return a default candidate to prevent empty input_ids
-            default_cand = torch.tensor([tokenizer.cls_token_id], device=control_cand.device)
-            cands.append(default_cand)
-
-        return cands
-
-    def get_filtered_cands(self, control_cand, tokenizer, curr_control=None):
+    
+    def get_filtered_cands(self, adv_cand, tokenizer, curr_adv=None):
         """
         filter input candidates
 
-        Parameters
-        ----------
-        control_cand : list
-            The list of control tokens
-        tokenizer : object
-            The tokenizer object
-        curr_control : list
-            the current control token ids
-        
-        Returns
-        -------
-        """
-        # pdb.set_trace()
+        Args:
+            adv_cand : The list of adversarial tokens
+            tokenizer : The tokenizer object
+            curr_adv : The current adversarial token ids
 
-        if curr_control is None:
-            raise Exception('Please provide the current control token ids')
+        Returns:
+            The list of filtered adversarial candidates
+        """
+
+        if curr_adv is None:
+            raise Exception('Please provide the current adversarial token ids')
         
         cands, count = [], 0
-        for i in range(control_cand.shape[0]):
+        for i in range(adv_cand.shape[0]):
             try:
-                decoded_str = tokenizer.decode(control_cand[i], skip_special_tokens=True)
+                decoded_str = tokenizer.decode(adv_cand[i], skip_special_tokens=True)
                 # print("decoded_str": decoded_str)
                 encoded_toks = tokenizer(decoded_str, add_special_tokens=False).input_ids
-                encoded_toks = torch.tensor(encoded_toks, device=control_cand.device)
+                encoded_toks = torch.tensor(encoded_toks, device=adv_cand.device)
 
-                if len(control_cand[i]) == len(encoded_toks) and not torch.all(torch.eq(control_cand[i], curr_control)):
+                if len(adv_cand[i]) == len(encoded_toks) and not torch.all(torch.eq(adv_cand[i], curr_adv)):
                     # Important! add this to mitagate the situation that the encoded_tok is not equal to the origin one
-                    if torch.all(torch.eq(control_cand[i], encoded_toks)):
-                        cands.append(control_cand[i])
+                    if torch.all(torch.eq(adv_cand[i], encoded_toks)):
+                        cands.append(adv_cand[i])
                     else:
                         count += 1
                 else:
@@ -288,42 +181,123 @@ class GCG:
             except IndexError:
                 logging.error(f"IndexError: piece id is out of range for candidate at index {i}")
                 count += 1
-        not_valid_ratio = round(count / len(control_cand), 2)            
-        logging.warning(f"Warning: {not_valid_ratio} control candidates were not valid")
+        not_valid_ratio = round(count / len(adv_cand), 2)     
+        if not_valid_ratio > 0.1:       
+            logging.warning(f"Warning: {not_valid_ratio} adversarial candidates were not valid")
 
         if not_valid_ratio > 0.1 and cands != []:
-            cands = cands + [cands[-1]] * (len(control_cand) - len(cands))
+            cands = cands + [cands[-1]] * (len(adv_cand) - len(cands))
         elif cands == []:
-            print("All the control candidates are not valid. Please check the initial control string.")
+            print("All the adversarial candidates are not valid. Please check the initial adversarial string.")
         return cands
     
-    def sample_control(self, grad, control_toks, batch_size, topk=256, allow_non_ascii=False):
+    def sample_adv_tokens(self, grad, adv_tokens, batch_size, topk=256, allow_non_ascii=False):
+        """
+        Sample new adversarial tokens based on gradients.
+
+        Args:
+            grad: Gradients for adversarial tokens.
+            adv_tokens: Current adversarial tokens.
+            batch_size: Number of samples to generate.
+            topk: Top-k candidates to sample from.
+            allow_non_ascii: Whether to allow non-ASCII tokens.
+
+        Returns:
+            New sampled adversarial tokens.
+        """
         if not allow_non_ascii:
             grad[:, self._nonascii_toks.to(grad.device)] = np.infty
         
         top_indices = (-grad).topk(topk, dim=1).indices
-        # print('Shape of top_indices:', top_indices.shape)
 
-        original_control_toks = control_toks.repeat(batch_size, 1)
+        original_adv_tokens = adv_tokens.repeat(batch_size, 1)
         new_token_pos = torch.arange(
             0, 
-            len(control_toks), 
-            len(control_toks) / batch_size, 
+            len(adv_tokens), 
+            len(adv_tokens) / batch_size, 
             device=grad.device
         ).type(torch.int64)
-        # print('the shape of new_token_pos is: ', new_token_pos.shape)
 
         new_token_val = torch.gather(
             top_indices[new_token_pos], 1, 
             torch.randint(0, topk, (batch_size, 1), device=grad.device)
         )
-        # print('the shape of new_token_val is: ', new_token_val.shape)
 
-        new_control_toks = original_control_toks.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
-        return new_control_toks
-  
-    def attack_iteration(self, question_embedding, control_tokens, input_ids, control_slice):
-        pass
+        new_adv_tokens = original_adv_tokens.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
+        return new_adv_tokens
+
+    def token_gradients(self, input_ids, question_embedding, adv_slice):
+        """
+        Computes gradients of the loss with respect to the coordinates.
+
+        Args:
+            input_ids: The input ids.
+            question_embedding: The question embedding to calculate the loss
+            adv_slice: The slice of the input to compute the gradients with respect to.
+
+        Returns:
+            The gradients of the loss with respect to the coordinates.
+        """
+        embed_weights = get_embedding_weight(self.model)
+        one_hot = torch.zeros(
+            input_ids[adv_slice].shape[0],
+            embed_weights.shape[0],
+            device=self.model.device,
+            dtype=embed_weights.dtype
+        )
+        one_hot.scatter_(
+            1,
+            input_ids[adv_slice].unsqueeze(1),
+            torch.ones(one_hot.shape[0], 1, device=self.model.device, dtype=embed_weights.dtype)
+        )
+        one_hot.requires_grad_()
+        input_embeds = (one_hot @ embed_weights).unsqueeze(0)
+
+        # now sitich it togethor with the rest of the embeddings
+        embeds = get_embeddings(self.model, input_ids.unsqueeze(0)).detach()
+        full_embeds = torch.cat(
+            [
+                embeds[:, :adv_slice.start, :],
+                input_embeds,
+                embeds[:, adv_slice.stop:, :]
+            ],
+            dim=1
+        )
+        sentence_embedding = self.model(inputs_embeds=full_embeds)
+        loss = self.get_loss(question_embedding, sentence_embedding, mode='mse', reduction='mean')
+        loss.backward()
+
+        return one_hot.grad.clone()
+
+    def attack_iteration(self, question_embedding, adv_tokens, input_ids, adv_slice):
+        """
+        Perform a single iteration of the attack.
+
+        Args:
+            question_embedding: The question embedding to calculate the loss.
+            adv_tokens: The adversarial tokens.
+            input_ids: The input ids.
+            adv_slice: The slice of the input to compute the gradients with respect to.
+        """
+        grad = self.token_gradients(input_ids, question_embedding.detach(), adv_slice)
+        averaged_grad = grad / grad.norm(dim=-1, keepdim=True)
+
+        candidates = []
+        batch_size = 128
+        topk = 64
+        filter_cand=True
+
+        with torch.no_grad():
+            adv_cand = self.sample_adv_tokens(averaged_grad, adv_tokens, batch_size, topk) # [batch_size, adv_string_length]
+            if filter_cand:
+                candidates.append(self.get_filtered_cands(adv_cand, self.tokenizer, adv_tokens)) # [[]]
+            else:
+                candidates.append(adv_tokens)
+        del averaged_grad, adv_cand
+        gc.collect()
+        candidates = candidates[0] # [[]]->[]
+
+        return candidates
 
     def run(self, target):        
         optim_prompts, optim_steps = [], []
@@ -332,127 +306,87 @@ class GCG:
         while len(optim_prompts) < self.max_successful_prompt and attack_attempt < self.max_attack_attempts and attack_steps < self.max_attack_steps:
             attack_attempt += 1
             logging.info(f"Starting attack attempt {attack_attempt}")
-            # Initialize control tokens
-            control_str, control_tokens = self.init_adv_suffix()
+            # Initialize adversarial tokens.
+            adv_str, adv_tokens = self.init_adv_suffix()
 
-            curr_prompt = f"{target} {control_str}" if not self.no_space else f"{target}{control_str}"
-            control_slice = slice(-self.control_string_length, None)
-            control_tokens = torch.tensor(control_tokens, device=self.device)
-            assert len(control_tokens) == self.control_string_length, f"Control tokens length is {len(control_tokens)}"
-            # when random is true, sometimes the control token will not be tokenized as expected length
+            target_poison = f"{target} {adv_str}" if not self.no_space else f"{target}{adv_str}" # target_poison = fixed_target + adv_str
+            target_tokens = self.tokenizer(target_poison).input_ids
+            input_ids = torch.tensor(target_tokens, device=self.device)
 
-            # logging.info(f"Control string: {control_str}")
-            # logging.info(f"Question string: {self.question}")
-            # logging.info(f"Current prompt: {curr_prompt}")
+            fixed_tokens = self.tokenizer(target).input_ids
+            fixed_slice = slice(1, len(fixed_tokens) - 1)            
+            adv_slice = slice(fixed_slice.stop, len(target_tokens) - 1)
+            adv_tokens = torch.tensor(target_tokens[adv_slice], device=self.device)
+            # when random is true, sometimes the adversarial token will not be tokenized as expected length
+            assert len(adv_tokens) == self.adv_string_length, f"Control tokens length is {len(adv_tokens)}"
+            
+            logging.info(f"Question string: {self.question}")
+            logging.info(f"Current Posion Info: {target_poison}")
+            logging.info(f"Adversarial string: {adv_str}")
+            
             question_embedding = self.model(self.question).detach()
-            self.model.zero_grad()
-            input_ids = torch.tensor(self.tokenizer(curr_prompt).input_ids, device=self.device)
             target_embedding = self.model(input_ids=input_ids.unsqueeze(0))
             
-            initial_loss = self.get_loss(question_embedding, target_embedding, reduction="mean", dim=1)
+            initial_loss = self.get_loss(question_embedding, target_embedding, mode='mse', reduction='none')
             logging.info(f"Initial loss: {initial_loss.item()}")
-
             local_optim_counter = 0
-            best_loss = 999999
-            for i in range(self.max_steps):
-
-                # The loss is too high for a long time
-                if self.early_stop and i > self.early_stop_iterations and best_loss > self.loss_threshold:
-                    logging.info('early stop by loss at {}-th step'.format(i))
-                    break
-
-                # The loss does not decrease for a long time
-                if self.early_stop and local_optim_counter >= self.early_stop_local_optim:
-                    logging.info("early stop by local optim at {}-th step".format(i))
-                    break   
-                
-                if attack_steps >= self.max_attack_steps:
-                    logging.info("Reach the maximum attack steps")
-                    break
-                    
-                if i != 0:
-                    input_ids[control_slice] = control_tokens
-
+            best_loss = MAX_LOSS
+            for step in range(self.max_steps):
                 attack_steps += 1
-                grad = token_gradients(self.model, input_ids, question_embedding.detach(), control_slice)
-                averaged_grad = grad / grad.norm(dim=-1, keepdim=True)
 
-                candidates = []
-                batch_size = 128
-                topk = 64
-                filter_cand=True
-                with torch.no_grad():
-                    # pdb.set_trace()
-                    control_cand = self.sample_control(averaged_grad, control_tokens, batch_size, topk) # 128, 20
-                    if filter_cand:
-                        candidates.append(self.get_filtered_cands(control_cand, self.tokenizer, control_tokens)) # [[]]
-                    else:
-                        candidates.append(control_cand)
-                del averaged_grad, control_cand ; gc.collect()
-                curr_best_loss = 999999
-                curr_best_control_tokens = None
-
-                candidates = candidates[0] # [[]]->[]
+                if self.early_stop and step > self.early_stop_iterations and local_optim_counter > self.early_stop_local_optim :
+                    logging.info(f"Early stop at step {step}: local optimization stagnated.")
+                    break
+                
+                if step != 0:
+                    input_ids[adv_slice] = adv_tokens
+                
+                # Get the candidates from the gradient descent
+                candidates = self.attack_iteration(question_embedding, adv_tokens, input_ids, adv_slice)
+                if not candidates:
+                    logging.warning("No valid candidates found. Stopping iteration.")
+                    break
+                
+                curr_best_loss = MAX_LOSS
+                curr_best_adv_tokens = None
 
                 with torch.no_grad():
                     inputs = torch.tensor([], device=self.device)
-                    for cand in candidates: # cand-len: 20
+                    for cand in candidates: 
                         tmp_input = input_ids.clone()
-                        tmp_input[control_slice] = cand
+                        tmp_input[adv_slice] = cand
                         if inputs.shape[0] == 0:
                             inputs = tmp_input.unsqueeze(0) # [1, len]
                         else:
                             inputs = torch.cat((inputs, tmp_input.unsqueeze(0)), dim=0) # [N, len]
                     
                     target_embeddings = self.model(input_ids=inputs)
-                    if self.batch_size > 1:
-                        losses = self.get_loss(question_embedding.unsqueeze(1), target_embeddings.unsqueeze(0), dim=2) # get [128] loss
-                    else:
-                        losses = self.get_loss(question_embedding, target_embeddings)
-                    # del inputs ; gc.collect()
-                    losses[torch.isnan(losses)] = 999999
-                    curr_best_loss, best_idx = torch.min(losses, dim=0)
-                    curr_best_control_tokens = candidates[best_idx]
-                    del inputs ; gc.collect()
-                # if self.attack_batch_mode == "mean":
-                    # logging.info(f"current best loss: {curr_best_loss.item()}")
-                    # pass
-                # else:
-                    # pass
-                    # logging.info(f"current best loss: {curr_best_loss.item()}")
+                    losses = self.get_loss(question_embedding, target_embeddings, mode='mse', reduction='none') # get [128] loss
+                losses[torch.isnan(losses)] = MAX_LOSS
+                curr_best_loss, best_idx = torch.min(losses, dim=0)
+                curr_best_adv_tokens = candidates[best_idx]
+                del inputs
+                gc.collect()
+                
+                logging.info(f"Current Best Loss: {curr_best_loss.item()}")
 
                 if curr_best_loss < best_loss:
                     local_optim_counter = 0
                     best_loss = curr_best_loss
-                    control_tokens = deepcopy(curr_best_control_tokens) # in the next iteration, we will use the best control tokens to update the input_ids
-                    logging.info("Step: {}, Loss: {}".format(i, best_loss.data.item()))
-                    current_control_str = self.tokenizer.decode(curr_best_control_tokens)
+                    adv_tokens = deepcopy(curr_best_adv_tokens) # in the next iteration, we will use the best adversarial tokens to update the input_ids
+                    logging.info("Step: {}, Loss: {}".format(step, best_loss.data.item()))
+                    current_adv_str = self.tokenizer.decode(curr_best_adv_tokens)
                 else:
-                    if isinstance(best_loss, int):
-                        logging.info("After {} iterations, the best loss is: ".format(i, best_loss))
-                    else:
-                        logging.info("After {} iterations, the best loss is: ".format(i, best_loss.data.item()))
-
                     local_optim_counter += 1
-                    print("local_optim_counter: ", local_optim_counter)
+                    logging.info(f"The local optim counter is: {local_optim_counter}")
 
-                del candidates, tmp_input, losses ; gc.collect()
+                del candidates, tmp_input, losses
+                gc.collect()
                 self.model.zero_grad()
-            
-            if isinstance(best_loss, int):
-                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss))
-            else:
-                logging.info("In this attempt, after {} iterations, the best loss is: {}".format(i, best_loss.data.item()))
-            
-            # logging.info('In {} attemp, number of optim prompts is: {}'.format(attack_attempt, len(curr_optim_prompts)))
 
-            optim_prompts.append(current_control_str)
+            optim_prompts.append(current_adv_str)
             optim_steps.append(attack_steps)
-            
-            logging.info('After {} attemp, the total number of optim prompts is: {}'.format(attack_attempt, len(optim_prompts)))
+            logging.info(f"Attack attempt {attack_attempt} completed. Total successful prompts: {len(optim_prompts)}")
         
-        for i in range(len(optim_prompts)):
-            self.writter.writerow([self.args.index, self.question, optim_prompts[i], best_loss.data.item(), optim_steps[i], attack_attempt])
-
-        
-        
+        for i, prompt in enumerate(optim_prompts):
+            self.result_writer.writerow([self.args.index, self.question, prompt, best_loss.data.item(), optim_steps[i], attack_attempt])
