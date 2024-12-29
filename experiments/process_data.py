@@ -51,8 +51,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Get the top-k similarity score for each test query')
-    parser.add_argument('--results_file_path', type=str, default='./Dataset/nq/nq-contriever.json', help='The path to the beir evaluation results file')  
-    parser.add_argument('--target_queries_path', type=str, default='./Dataset/nq/test_queries.jsonl', help='The path to the train queries file')
+    parser.add_argument('--results_file_path', type=str, default='./datasets/nq/nq-contriever.json', help='The path to the beir evaluation results file')  
+    parser.add_argument('--target_queries_path', type=str, default='./datasets/nq/test_queries.jsonl', help='The path to the train queries file')
     parser.add_argument('--k', type=int, default=19, help='The number of top k results to consider')
     parser.add_argument('--domain', type=int, default=1, help='The category of the queries')
     parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco', 'nq'], default='nq', help='The dataset to process')
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args.results_file_path = f'./Datasets/{args.dataset}/{args.dataset}-{args.retriever}.json'
+    args.results_file_path = f'./datasets/{args.dataset}/{args.dataset}-{args.retriever}.json'
     
 
     main(args)  

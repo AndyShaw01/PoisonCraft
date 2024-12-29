@@ -3,7 +3,7 @@
 import pandas as pd
 import json
 import argparse
-import pdb
+
 def main(args):
     """
     Read the TSV file and remove duplicates, then select the queries with these query IDs from the JSONL file and save them to a new JSONL file.
@@ -32,8 +32,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--id_file_path", type=str, default="./Datasets/msmarco/qrels/dev.tsv")
-    parser.add_argument("--target_file_path", type=str, default="./Datasets/msmarco/queries.jsonl")
+    parser.add_argument("--id_file_path", type=str, default="./datasets/msmarco/qrels/dev.tsv")
+    parser.add_argument("--target_file_path", type=str, default="./datasets/msmarco/queries.jsonl")
     args = parser.parse_args()
 
     main(args)

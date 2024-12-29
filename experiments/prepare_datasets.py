@@ -52,16 +52,16 @@ def main():
     get_beir_datasets(datasets, out_dir)
 
     for dataset in datasets:
-        id_file_path = f"./datasets_test/{dataset}/qrels/dev.tsv"
-        target_file_path = f"./datasets_test/{dataset}/queries.jsonl"
-        output_file_path = f"./datasets_test/{dataset}/selected_queries.jsonl"
+        id_file_path = f"./datasets/{dataset}/qrels/dev.tsv"
+        target_file_path = f"./datasets/{dataset}/queries.jsonl"
+        output_file_path = f"./datasets/{dataset}/selected_queries.jsonl"
         
         # Generate selected_queries.jsonl
         generate_selected_queries(id_file_path, target_file_path, output_file_path)
 
         original_queries_file_path = output_file_path
-        train_queries_file_path = f"./datasets_test/{dataset}/train_queries.jsonl"
-        test_queries_file_path = f"./datasets_test/{dataset}/test_queires.jsonl"
+        train_queries_file_path = f"./datasets/{dataset}/train_queries.jsonl"
+        test_queries_file_path = f"./datasets/{dataset}/test_queires.jsonl"
         data = []
         # Load data from file
         with open(f'{original_queries_file_path}', 'r') as f:

@@ -208,12 +208,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Classify questions')
     parser.add_argument('--api_key', type=str, default='sk-proj-', help='OpenAI API key')
     parser.add_argument('--model_path', type=str, default='gpt-4o-mini', help='OpenAI model path')
-    parser.add_argument('--file_path', type=str, default='./Datasets/train_queries.jsonl', help='The queries file')
-    parser.add_argument('--output_path', type=str, default='./Dataset/train_queries_add_class_14.jsonl', help='The output file')
+    parser.add_argument('--file_path', type=str, default='./datasets/train_queries.jsonl', help='The queries file')
+    parser.add_argument('--output_path', type=str, default='./dataset/train_queries_add_class_14.jsonl', help='The output file')
     parser.add_argument('--dataset', type=str, choices=['nq', 'hotpotqa', 'msmarco'], default='hotpotqa') 
     parser.add_argument('--mode', type=str, choices=['train', 'test'], default='train')
     args = parser.parse_args()
 
-    args.output_path = f"./Datasets/{args.dataset}/{args.mode}_queries_with_domain.jsonl"
-    args.file_path = f"./Datasets/{args.dataset}/{args.mode}_queries.jsonl"
+    args.output_path = f"./datasets/{args.dataset}/{args.mode}_queries_with_domain.jsonl"
+    args.file_path = f"./datasets/{args.dataset}/{args.mode}_queries.jsonl"
     main(args)
