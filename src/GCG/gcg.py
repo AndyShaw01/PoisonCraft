@@ -3,14 +3,11 @@ import torch.nn.functional as F
 import time
 import gc
 import numpy as np
-from copy import deepcopy
-import pandas as pd
-import csv
-import pdb
 import logging
 
-from src.GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
+from copy import deepcopy
 
+from src.GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
 from src.embedding.sentence_embedding import SentenceEmbeddingModel
 
 MAX_LOSS = 999999
