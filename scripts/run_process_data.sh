@@ -18,6 +18,3 @@ do
             --k $TOP_K --domain $DOMAIN_INDEX --target_queries_path $TARGET_FILE --retriever $RETRIEVER # > "$LOG_PATH_PRE/get_ground_truth_${TOP_K}_.log" 2>&1
     done
 done
-
-# 等待所有后台任务完成
-wait

@@ -7,7 +7,7 @@ DOMAIN_INDEX=$1
 DATASET="msmarco" # msmarco
 SHADOW_FILE="./datasets/${DATASET}/domain/train_domains_14/domain_${DOMAIN_INDEX}.jsonl"
 
-CONTROL_LENGTH=$2
+ADV_LENGTH=$2
 ATTACK_BATCH_SIZE=4
 LOSS_THRESHOLD=0.2
 
@@ -19,7 +19,7 @@ elif [ "$RETRIEVER" = "simcse" ]; then
     MODEL_PATH="/data1/shaoyangguang/offline_model/simcse"
 fi
 
-LOG_PATH="logs/${RETRIEVER}_on_${DATASET}/domain_${DOMAIN_INDEX}_control_${CONTROL_LENGTH}"
+LOG_PATH="logs/${RETRIEVER}_on_${DATASET}/domain_${DOMAIN_INDEX}_control_${ADV_LENGTH}"
 
 mkdir -p "$LOG_PATH"
 
@@ -28,8 +28,8 @@ echo "Using GPU $3"
 
 python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH \
     --loss_threshold $LOSS_THRESHOLD \
-    --control_string_length $CONTROL_LENGTH \
+    --adv_string_length $ADV_LENGTH \
     --batch_size $ATTACK_BATCH_SIZE \
     --shadow_queries_path $SHADOW_FILE \
-    --domain_index $DOMAIN_INDEX # > "$LOG_PATH/gcg_${RUN_MODE}.log" 2>&1
-echo "python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH --loss_threshold $LOSS_THRESHOLD --control_string_length $CONTROL_LENGTH --batch_size $ATTACK_BATCH_SIZE --shadow_queries_path $TRAIN_FILE --domain_index $DOMAIN_INDEX"
+    --domain_index $DOMAIN_INDEX > "$LOG_PATH/gcg_${RUN_MODE}.log" 2>&1
+echo "python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH --loss_threshold $LOSS_THRESHOLD --adv_string_length $ADV_LENGTH --batch_size $ATTACK_BATCH_SIZE --shadow_queries_path $TRAIN_FILE --domain_index $DOMAIN_INDEX"
