@@ -11,7 +11,7 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GCG attack on harmful dataset')
     # Training Setting Args
-    parser.add_argument("--control_string_length", type=int, default=20, help="Length of the control string.")  
+    parser.add_argument("--adv_string_length", type=int, default=20, help="Length of the adversarial string.")  
     parser.add_argument("--max_attack_steps", type=int, default=1500, help="The maximum number of attack steps.")     
     parser.add_argument("--early_stop", type=bool, default=True, help="Whether to stop the attack early.")
     parser.add_argument("--max_steps", type=int, default=500, help="The maximum number of steps to run the attack.")
