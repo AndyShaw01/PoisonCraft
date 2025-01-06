@@ -52,12 +52,18 @@ def main():
     get_beir_datasets(datasets, out_dir)
 
     for dataset in datasets:
-        id_file_path = f"./datasets/{dataset}/qrels/dev.tsv"
+        if dataset == 'nq':
+            id_file_path = f"./datasets/{dataset}/qrels/test.tsv"
+        else:
+            id_file_path = f"./datasets/{dataset}/qrels/dev.tsv"
         target_file_path = f"./datasets/{dataset}/queries.jsonl"
         output_file_path = f"./datasets/{dataset}/selected_queries.jsonl"
         
         # Generate selected_queries.jsonl
-        generate_selected_queries(id_file_path, target_file_path, output_file_path)
+        if dataset == 'nq':
+            os.system(f'cp {target_file_path} {output_file_path}')
+        else:
+            generate_selected_queries(id_file_path, target_file_path, output_file_path)
 
         original_queries_file_path = output_file_path
         train_queries_file_path = f"./datasets/{dataset}/train_queries.jsonl"
