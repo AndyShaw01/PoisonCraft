@@ -1,10 +1,6 @@
 import torch
 
 from transformers import (BertModel, RobertaModel, T5EncoderModel, MPNetModel)
-from transformers import (AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel,
-                          GPTJForCausalLM, GPTNeoXForCausalLM,
-                          LlamaForCausalLM, MptForCausalLM, Qwen2ForCausalLM, 
-                          GemmaForCausalLM, MistralForCausalLM) # 
 import time
 from src.embedding.sentence_embedding import SentenceEmbeddingModel
 

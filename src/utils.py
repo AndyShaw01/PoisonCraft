@@ -18,7 +18,8 @@ MODEL_CODE_TO_MODEL_NAME = {
     "contriever-msmarco": "/data1/shaoyangguang/offline_model/contriever-msmarco",
     "dpr-single": "/data1/shaoyangguang/offline_model/dpr-question_encoder-single-nq-base",
     "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
-    "ance": "/data1/shaoyangguang/offline_model/ance"
+    "ance": "/data1/shaoyangguang/offline_model/ance",
+    "simcse": "/data1/shaoyangguang/offline_model/simcse",
 }
 
 # MODEL_CODE_TO_CMODEL_NAME = MODEL_CODE_TO_QMODEL_NAME.copy()
