@@ -26,10 +26,10 @@ mkdir -p "$LOG_PATH"
 export CUDA_VISIBLE_DEVICES=$3
 echo "Using GPU $3"
 
-python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH \
-    --loss_threshold $LOSS_THRESHOLD \
-    --adv_string_length $ADV_LENGTH \
-    --batch_size $ATTACK_BATCH_SIZE \
-    --shadow_queries_path $SHADOW_FILE \
-    --domain_index $DOMAIN_INDEX > "$LOG_PATH/gcg_${RUN_MODE}.log" 2>&1
-echo "python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH --loss_threshold $LOSS_THRESHOLD --adv_string_length $ADV_LENGTH --batch_size $ATTACK_BATCH_SIZE --shadow_queries_path $TRAIN_FILE --domain_index $DOMAIN_INDEX"
+# python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH \
+#     --loss_threshold $LOSS_THRESHOLD \
+#     --adv_string_length $ADV_LENGTH \
+#     --batch_size $ATTACK_BATCH_SIZE \
+#     --shadow_queries_path $SHADOW_FILE \
+#     --domain_index $DOMAIN_INDEX #> "$LOG_PATH/gcg_${RUN_MODE}.log" 2>&1
+echo "python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH --loss_threshold $LOSS_THRESHOLD --adv_string_length $ADV_LENGTH --batch_size $ATTACK_BATCH_SIZE --shadow_queries_path $SHADOW_FILE --domain_index $DOMAIN_INDEX"
