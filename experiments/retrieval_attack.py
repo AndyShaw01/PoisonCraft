@@ -10,7 +10,7 @@ import pandas as pd
 import torch.nn.functional as F
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from embedding.sentence_embedding import SentenceEmbeddingModel
+from src.embedding.sentence_embedding import SentenceEmbeddingModel
 from src.utils import cosine_similarity, get_adv_suffix_for_main_result, load_frequent_words_as_str
 
 def setup():

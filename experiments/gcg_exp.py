@@ -17,6 +17,8 @@ if __name__ == "__main__":
     parser.add_argument("--max_steps", type=int, default=500, help="The maximum number of steps to run the attack.")
     parser.add_argument("--max_attack_attempts", type=int, default=5, help="The maximum number of attack attempts.")
     parser.add_argument("--max_successful_prompt", type=int, default=5, help="The maximum number of successful prompts.")
+    parser.add_argument("--early_stop_iterations", type=int, default=400, help="Early stop threshold, before which there will be no early stops")
+    parser.add_argument("--early_stop_local_optim", type=int, default=100, help="Early stop threshold for local optimization")
     parser.add_argument("--loss_threshold", type=float, default=0.2, help="The loss threshold to optimize the attack.")
     parser.add_argument("--question", type=str, default=None)
     parser.add_argument("--inject_info", type=str, help='The information to be injected',
