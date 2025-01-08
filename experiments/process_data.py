@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import os
 import argparse
 import pdb
 
@@ -46,7 +47,12 @@ def main(args):
     selected_df = kth_similarity_df[kth_similarity_df['test_name'].isin(queries_id)]
     selected_df['id_order'] = pd.Categorical(selected_df['test_name'], categories=queries_id, ordered=True)
     sorted_df = selected_df.sort_values('id_order').drop(columns='id_order')
-    sorted_df.to_csv(f'./Datasets/{args.dataset}/ground_truth_topk_{args.retriever}/ground_truth_top_{args.k}_domain_{args.category}.csv', index=False)
+
+    file_path = f'./Datasets/{args.dataset}/ground_truth_topk_{args.retriever}/ground_truth_top_{args.k}_domain_{args.category}.csv'
+    if not os.path.exists(os.path.dirname(file_path)): 
+        os.makedirs(os.path.dirname(file_path))
+
+    sorted_df.to_csv(file_path, index=False)
     print("The aligned results have been saved.")
 
 if __name__ == "__main__":

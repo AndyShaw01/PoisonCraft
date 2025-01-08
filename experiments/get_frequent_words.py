@@ -41,15 +41,6 @@ def filter_stopwords(tokens, stopwords):
     """
     return [token for token in tokens if token.lower() not in stopwords]
 
-# def save_frequency_to_file(frequency, result_file):
-#     """
-#     Save word frequency data to a CSV file.
-#     """
-#     with open(result_file, 'w') as file:
-#         file.write('Token,Frequency\n')
-#         for token, freq in frequency.most_common():
-#             file.write(f"{token},{freq}\n")
-
 def main(args):
     # Load the target tokenizer of the target model
     model_name = MODEL_CODE_TO_MODEL_NAME[args.model_code]
@@ -78,9 +69,11 @@ if __name__ == "__main__":
     parser.add_argument("--target_dataset", choices=['nq', 'hotpotqa', 'msmarco'], default='nq', help='The target dataset')
     parser.add_argument('--shadow_dataset', type=str, default='./datasets/nq/shadow_queries.jsonl', help='The folder of shadow datasets')
     parser.add_argument('--result_file', type=str, default='./datasets/nq/frequent_words.json', help='The result file of frequency of the original query in the shadow datasets')
-    parser.add_argument('--model_code', choices=['contriever', 'simcse', 'ance'], default='contriever', help='The target model code')
+    parser.add_argument('--model_code', choices=['contriever', 'simcse', 'ance', 'bge-small'], default='contriever', help='The target model code')
 
     args = parser.parse_args()
-    args.shawdow_dataset = './datasets/' + args.target_dataset + '/shadow_queries.jsonl'
-    args.result_file = './datasets/' + args.target_dataset + '/frequent_words.json'
+
+    args.shawdow_dataset = f'./datasets/{args.target_dataset}/shadow_queries.jsonl'
+    args.result_file = f'./datasets/{args.target_dataset}/frequent_words_{args.model_code}.json'
+
     main(args)
