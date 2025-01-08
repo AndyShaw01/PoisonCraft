@@ -20,6 +20,8 @@ MODEL_CODE_TO_MODEL_NAME = {
     "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
     "ance": "/data1/shaoyangguang/offline_model/ance",
     "simcse": "/data1/shaoyangguang/offline_model/simcse",
+    "bge-small": "/data1/shaoyangguang/offline_model/bge-small-en-v1.5",
+    "bge-unsp": "/data1/shaoyangguang/offline_model/bge-m3-unsupervised",
 }
 
 # MODEL_CODE_TO_CMODEL_NAME = MODEL_CODE_TO_QMODEL_NAME.copy()
@@ -220,7 +222,7 @@ def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_
             for exp in exp_list:
                 if retriever == 'contriever':
                     if dataset == 'nq':
-                        candidate_file = f'./Results_from_A800/part_results/Results/{exp}/batch-4/category_{domain}/results_{control_str_len}.csv'
+                        candidate_file = f'./results_from_A800/part_results/Results/{exp}/batch-4/category_{domain}/results_{control_str_len}.csv'
                     elif dataset == 'hotpotqa':
                         candidate_file = f'./Main_Results/contriever/{dataset}_1126/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
                 else:
@@ -232,7 +234,7 @@ def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_
                 attack_suffix = [attack_info + ' ' + x for x in df['control_suffix'].tolist()]
                 suffix_all[control_str_len] = attack_suffix
                 all_list += attack_suffix
-    return suffix_all, all_list
+    return all_list
 
 def batch_process_embeddings(embedding_model, texts, batch_size=32):
     """

@@ -34,7 +34,7 @@ class SentenceEmbeddingModel(nn.Module):
             return MPNetModel.from_pretrained(model_path), MPNetTokenizer.from_pretrained(model_path)
         elif "t5" in model_path:
             return T5EncoderModel.from_pretrained(model_path), T5Tokenizer.from_pretrained(model_path)
-        elif "contriever" in model_path or "simcse" in model_path:
+        elif "contriever" in model_path or "simcse" in model_path or "bge" in model_path:
             model = AutoModel.from_pretrained(model_path)
             tokenizer = AutoTokenizer.from_pretrained(model_path)
             return model, tokenizer
@@ -91,20 +91,25 @@ class SentenceEmbeddingModel(nn.Module):
 
 # Example
 if __name__ == "__main__":
-    model_path = "/data1/shaoyangguang/offline_model/simcse"
+    model_path = "/data1/shaoyangguang/offline_model/bge-small-en-v1.5"
     model = SentenceEmbeddingModel(model_path)
     tokenizer = model.tokenizer
     texts = [
         "There's a kid on a skateboard.",
         "A kid is skateboarding.",
-        "A kid is inside the house."
+        # "A kid is inside the house.",
+        "There's a kid on a skateboard."
+
     ]
 
     with torch.no_grad():
         embeddings = model(sentences=texts)
     
-    cosine_sim_0_1 = F.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[1].unsqueeze(0))
-    cosine_sim_0_2 = F.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[2].unsqueeze(0))
+    # cosine_sim_0_1 = F.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[1].unsqueeze(0))
+    # cosine_sim_0_2 = F.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[2].unsqueeze(0))
+    # get the dot product of two embeddings
+    cosine_sim_0_1 = torch.dot(embeddings[0], embeddings[1])
+    cosine_sim_0_2 = torch.dot(embeddings[0], embeddings[2])
 
     print(f"Cosine Similarity between embedding 0 and 1: {cosine_sim_0_1.item()}")
     print(f"Cosine Similarity between embedding 0 and 2: {cosine_sim_0_2.item()}")

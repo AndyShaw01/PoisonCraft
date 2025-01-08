@@ -35,9 +35,9 @@ class Config:
 
     def get_results_path(self, epoch_index, batch_index):
         return (
-            f"./Results/{self.attack_target}/batch-{self.batch_size}/"
+            f"./results/{self.attack_target}/batch-{self.batch_size}/"
             f"domain_{self.domain_index}/results_{self.adv_string_length}_"
-            f"epoch_{epoch_index}_batch_{batch_index}.csv"
+            f"epoch_{epoch_index}.csv"
         )
 
 
