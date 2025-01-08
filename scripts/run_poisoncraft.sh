@@ -34,5 +34,6 @@ python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH \
     --batch_size $ATTACK_BATCH_SIZE \
     --shadow_queries_path $SHADOW_FILE \
     --attack_target $DATASET \
+    --retriever $RETRIEVER \
     --domain_index $DOMAIN_INDEX > "$LOG_PATH/gcg.log" 2>&1
 echo "python -u "$PYTHON_EXP_SCRIPT" --model_path $MODEL_PATH --loss_threshold $LOSS_THRESHOLD --adv_string_length $ADV_LENGTH --batch_size $ATTACK_BATCH_SIZE --shadow_queries_path $SHADOW_FILE --domain_index $DOMAIN_INDEX --attack_target $DATASET"
