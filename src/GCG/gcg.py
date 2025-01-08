@@ -2,8 +2,11 @@ import torch
 import torch.nn.functional as F
 import time
 import gc
+import os
+import csv
 import numpy as np
 import logging
+import pdb
 
 from copy import deepcopy
 
@@ -22,10 +25,8 @@ class GCG:
     Attributes:
         args (Namespace): The original command-line arguments, containing:
             - General settings:
-                question (str): Question to attack.
                 model_path (str): Path to the model.
                 save_path (str): Path to save results.
-                index (int): Index of the question.
             - Attack configuration:
                 adv_string_length (int): Length of the adversarial string.
                 max_steps (int): Maximum number of steps.
@@ -61,6 +62,7 @@ class GCG:
         # Attack parameters
         self.adv_string_length = args.adv_string_length
         self.question = args.question
+        self.index = args.index
         self.max_steps = args.max_steps
         self.max_attack_attempts = args.max_attack_attempts
         self.max_successful_prompt = args.max_successful_prompt
@@ -77,9 +79,10 @@ class GCG:
 
         # Results file
         self.result_file = args.save_path or f'results-{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}.csv'
-        self.result_writer = self._initialize_result_writer()     
+        self._initialize_result_writer()
 
         self._nonascii_toks, self._ascii_toks = get_nonascii_toks(args.model_path, self.tokenizer)   
+
 
     def _initialize_logging(self):
         """Initialize the logging configuration."""
@@ -89,13 +92,16 @@ class GCG:
             datefmt='%Y-%m-%d %H:%M:%S'
         )
 
+
     def _initialize_result_writer(self):
         """Initialize the result CSV writer."""
-        import csv
-        fp = open(self.result_file, 'w', buffering=1)
-        writer = csv.writer(fp)
-        writer.writerow(['index', 'question', 'adv_suffix', 'loss', 'attack_steps', 'attack_attempt'])
-        return writer
+        file_exists = os.path.exists(self.result_file)
+        file_mode = 'w' if not file_exists else 'a'
+        self.fp = open(self.result_file, file_mode, buffering=1)
+        self.result_writer = csv.writer(self.fp)
+        if file_mode == 'w':
+            self.result_writer.writerow(['index', 'question', 'adv_suffix', 'loss', 'attack_steps', 'attack_attempt'])
+
 
     def init_adv_suffix(self, random=True):
         """
@@ -113,6 +119,7 @@ class GCG:
             cand_str = ' '.join(cand)
             cand_toks = self.tokenizer.encode(cand_str, add_special_tokens=False)
         return cand_str, cand_toks
+
 
     def get_loss(self, question_embedding, target_embedding, mode='mse', reduction='none'):
         """
@@ -143,6 +150,7 @@ class GCG:
 
         return loss
     
+
     def get_filtered_cands(self, adv_cand, tokenizer, curr_adv=None):
         """
         filter input candidates
@@ -188,6 +196,7 @@ class GCG:
             print("All the adversarial candidates are not valid. Please check the initial adversarial string.")
         return cands
     
+
     def sample_adv_tokens(self, grad, adv_tokens, batch_size, topk=256, allow_non_ascii=False):
         """
         Sample new adversarial tokens based on gradients.
@@ -222,6 +231,7 @@ class GCG:
 
         new_adv_tokens = original_adv_tokens.scatter_(1, new_token_pos.unsqueeze(-1), new_token_val)
         return new_adv_tokens
+
 
     def token_gradients(self, input_ids, question_embedding, adv_slice):
         """
@@ -266,6 +276,7 @@ class GCG:
 
         return one_hot.grad.clone()
 
+
     def attack_iteration(self, question_embedding, adv_tokens, input_ids, adv_slice):
         """
         Perform a single iteration of the attack.
@@ -295,6 +306,7 @@ class GCG:
         candidates = candidates[0] # [[]]->[]
 
         return candidates
+
 
     def run(self, target):        
         optim_prompts, optim_steps = [], []
@@ -331,10 +343,17 @@ class GCG:
             for step in range(self.max_steps):
                 attack_steps += 1
 
-                if self.early_stop and step > self.early_stop_iterations and local_optim_counter > self.early_stop_local_optim :
+                if self.early_stop and step > self.early_stop_iterations and local_optim_counter > self.early_stop_local_optim and best_loss < self.loss_threshold:
                     logging.info(f"Early stop at step {step}: local optimization stagnated.")
+                    logging.info(f"Current Best Loss: {best_loss.item()}")
+
                     break
                 
+                if attack_steps > self.max_attack_steps:
+                    # show the condition
+                    logging.info(f"Early stop condition: {attack_steps , self.max_attack_attempts}")
+                    break
+
                 if step != 0:
                     input_ids[adv_slice] = adv_tokens
                 
@@ -386,4 +405,6 @@ class GCG:
             logging.info(f"Attack attempt {attack_attempt} completed. Total successful prompts: {len(optim_prompts)}")
         
         for i, prompt in enumerate(optim_prompts):
-            self.result_writer.writerow([self.args.index, self.question, prompt, best_loss.data.item(), optim_steps[i], attack_attempt])
+            # print(f"Attack attempt {i + 1}: {prompt}")
+            logging.info(f"Attack attempt {i + 1}: {prompt}")
+            self.result_writer.writerow([self.index, self.question, prompt, best_loss.data.item(), optim_steps[i], attack_attempt])

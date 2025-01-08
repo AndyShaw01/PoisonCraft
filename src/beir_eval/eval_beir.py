@@ -1,28 +1,22 @@
-import logging
-import pathlib, os
+import argparse
 import json
+import logging
+import os
+from typing import Dict
+
 import torch
-import sys
 import transformers
-import tqdm
-import numpy as np
-from typing import List, Dict
-from tqdm import tqdm
-
-
 from beir import util, LoggingHandler
-from beir.retrieval import models
 from beir.datasets.data_loader import GenericDataLoader
 from beir.retrieval.evaluation import EvaluateRetrieval
-from beir.retrieval.search.dense import DenseRetrievalExactSearch as DRES
+from beir.retrieval import models
 from beir.retrieval.models import DPR
-
-from transformers import AutoTokenizer, AutoModel
+from beir.retrieval.search.dense import DenseRetrievalExactSearch as DRES
+from transformers import AutoModel, AutoTokenizer
 from contriever_src.contriever import Contriever
 from contriever_src.beir_utils import DenseEncoderModel
-# from src.utils import load_json
-import pdb
 
+# Mapping model codes to model paths
 MODEL_CODE_TO_MODEL_NAME = {
     "contriever": "/data1/shaoyangguang/offline_model/contriever",
     "contriever-msmarco": "/data1/shaoyangguang/offline_model/contriever-msmarco",
@@ -30,92 +24,194 @@ MODEL_CODE_TO_MODEL_NAME = {
     "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
     "ance": "/data1/shaoyangguang/offline_model/ance",
     "simcse": "/data1/shaoyangguang/offline_model/simcse",
+    "bge-small": "/data1/shaoyangguang/offline_model/bge-small-en-v1.5",
 }
 
-import argparse
-parser = argparse.ArgumentParser(description='test')
-# ance hotpotqa - cos_sim - hotpotqa - test - hotpotqa_ance_100.json
-parser.add_argument('--model_code', type=str, default="simcse", help='Model code to use for retrieval')
-parser.add_argument('--score_function', type=str, default='cos_sim', choices=['dot', 'cos_sim'])
-parser.add_argument('--top_k', type=int, default=100)
-parser.add_argument('--dataset', type=str, default="nq", help='BEIR dataset to evaluate')
-parser.add_argument('--split', type=str, default='test') # ms: dev, hotpotqa: test, nq: test
+import numpy as np
+from typing import List, Dict
+from transformers import AutoTokenizer, AutoModel
+import torch
 
-parser.add_argument('--result_output', default="results/beir_results/nq-simcse-cos.json", type=str)
+class CustomDEModel:
+    def __init__(self, model_path=None, **kwargs):
+        """
+        Initialize your custom dense retrieval model.
+        Args:
+            model_path (str): Path to your pretrained model.
+            **kwargs: Additional parameters for customization.
+        """
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.model = AutoModel.from_pretrained(model_path).to(self.device)
+        self.batch_size = kwargs.get("batch_size", 32)
+        self.max_length = kwargs.get("max_length", 32)
+        self.normalize_embeddings = kwargs.get("normalize_embeddings", True)
 
-parser.add_argument('--gpu_id', type=int, default=3)
-parser.add_argument("--per_gpu_batch_size", default=32, type=int, help="Batch size per GPU/CPU for indexing.")
-parser.add_argument('--max_length', type=int, default=32)
+    def encode_queries(self, queries: List[str], batch_size: int = None, **kwargs) -> np.ndarray:
+        """
+        Encode queries into dense embeddings.
+        Args:
+            queries (List[str]): List of queries to encode.
+            batch_size (int): Batch size for encoding.
+        Returns:
+            np.ndarray: Query embeddings.
+        """
+        batch_size = batch_size or self.batch_size
+        self.model.eval()
+        query_embeddings = []
 
-args = parser.parse_args()
+        with torch.no_grad():
+            for i in range(0, len(queries), batch_size):
+                batch_queries = queries[i:i + batch_size]
+                inputs = self.tokenizer(
+                    batch_queries, padding=True, truncation=True,
+                    max_length=self.max_length, return_tensors="pt"
+                ).to(self.device)
+                outputs = self.model(**inputs)
+                embeddings = outputs.last_hidden_state[:, 0, :]  # Use [CLS] token embeddings
+                if self.normalize_embeddings:
+                    embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+                query_embeddings.append(embeddings.cpu().numpy())
 
-def compress(results):
-    for y in results:
-        k_old = len(results[y])
-        break
-    sub_results = {}
-    for query_id in results:
-        sims = list(results[query_id].items())
-        sims.sort(key=lambda x: x[1], reverse=True)
-        sub_results[query_id] = {}
-        for c_id, s in sims[:2000]:
-            sub_results[query_id][c_id] = s
-    for y in sub_results:
-        k_new = len(sub_results[y])
-        break
+        return np.vstack(query_embeddings)
+
+    def encode_corpus(self, corpus: List[Dict[str, str]], batch_size: int = None, **kwargs) -> np.ndarray:
+        """
+        Encode documents into dense embeddings.
+        Args:
+            corpus (List[Dict[str, str]]): List of documents (each a dictionary with "title" and "text").
+            batch_size (int): Batch size for encoding.
+        Returns:
+            np.ndarray: Document embeddings.
+        """
+        batch_size = batch_size or self.batch_size
+        self.model.eval()
+        doc_embeddings = []
+
+        with torch.no_grad():
+            for i in range(0, len(corpus), batch_size):
+                batch_corpus = corpus[i:i + batch_size]
+                texts = [
+                    (doc["title"] + " " + doc["text"]).strip() if "title" in doc else doc["text"]
+                    for doc in batch_corpus
+                ]
+                inputs = self.tokenizer(
+                    texts, padding=True, truncation=True,
+                    max_length=self.max_length, return_tensors="pt"
+                ).to(self.device)
+                outputs = self.model(**inputs)
+                embeddings = outputs.last_hidden_state[:, 0, :]  # Use [CLS] token embeddings
+                if self.normalize_embeddings:
+                    embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+                doc_embeddings.append(embeddings.cpu().numpy())
+
+        return np.vstack(doc_embeddings)
+
+def setup() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="BEIR Dense Retrieval Evaluation")
+    parser.add_argument('--model_code', type=str, default="bge-small", help="Model code to use for retrieval")
+    parser.add_argument('--score_function', type=str, default='dot', choices=['dot', 'cos_sim'])
+    parser.add_argument('--top_k', type=int, default=100)
+    parser.add_argument('--dataset', type=str, default="nq", help="BEIR dataset to evaluate")
+    parser.add_argument('--split', type=str, default='test', help="Dataset split (e.g., test, dev, train)")
+    parser.add_argument('--result_output', type=str, default="results/beir_results/nq-simcse-cos.json", help="Output file for results")
+    parser.add_argument('--gpu_id', type=int, default=2, help="GPU ID to use")
+    parser.add_argument('--per_gpu_batch_size', type=int, default=128, help="Batch size per GPU/CPU for indexing")
+    parser.add_argument('--max_length', type=int, default=128, help="Maximum sequence length")
+
+    args = parser.parse_args()
+    args.result_output = f"./results/beir_results/{args.dataset}-{args.model_code}-{args.score_function}.json"
+    if not os.path.exists("results/beir_results"):
+        os.makedirs("results/beir_results")
+
+    setup_logging()
+    
+    return args
+
+def setup_logging() -> None:
+    """Set up logging configuration."""
+    logging.basicConfig(
+        format="%(asctime)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=logging.INFO,
+        handlers=[LoggingHandler()]
+    )
+
+def compress_results(results: Dict) -> Dict:
+    """Compress retrieval results to top-2000."""
+    k_old = len(next(iter(results.values())))
+    compressed_results = {}
+
+    for query_id, scores in results.items():
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        compressed_results[query_id] = dict(sorted_scores[:2000])
+
+    k_new = len(next(iter(compressed_results.values())))
     logging.info(f"Compressed retrieval results from top-{k_old} to top-{k_new}.")
-    return sub_results
+    return compressed_results
 
-#### Just some code to print debug information to stdout
-logging.basicConfig(format='%(asctime)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO,
-                    handlers=[LoggingHandler()])
-#### /print debug information to stdout
+def load_model(args) -> DRES:
+    """Load the specified retrieval model."""
+    logging.info("Loading model...")
+    model_code = args.model_code
 
-logging.info(args)
+    if 'contriever' in model_code:
+        encoder = Contriever.from_pretrained(MODEL_CODE_TO_MODEL_NAME[model_code]).cuda()
+        tokenizer = transformers.BertTokenizerFast.from_pretrained(MODEL_CODE_TO_MODEL_NAME[model_code])
+        model = DRES(DenseEncoderModel(encoder, doc_encoder=encoder, tokenizer=tokenizer), batch_size=args.per_gpu_batch_size)
+    elif 'dpr' in model_code:
+        model = DRES(
+            DPR((MODEL_CODE_TO_MODEL_NAME[model_code], MODEL_CODE_TO_MODEL_NAME[model_code])),
+            batch_size=args.per_gpu_batch_size,
+            corpus_chunk_size=1000
+        )
+    elif 'ance' in model_code:
+        model = DRES(models.SentenceBERT(MODEL_CODE_TO_MODEL_NAME[model_code]), batch_size=args.per_gpu_batch_size, max_length=128, normalize_embeddings=True)
+    elif 'simcse' in model_code or 'bge' in model_code:
+        # encoder = AutoModel.from_pretrained(MODEL_CODE_TO_MODEL_NAME[model_code])
+        # tokenizer = AutoTokenizer.from_pretrained(MODEL_CODE_TO_MODEL_NAME[model_code])
+        model_path = MODEL_CODE_TO_MODEL_NAME[args.model_code]
+        model = DRES(CustomDEModel(model_path), batch_size=args.per_gpu_batch_size)
+    else:
+        raise NotImplementedError(f"Model code '{model_code}' is not implemented.")
+    
+    logging.info(f"Model loaded: {model.model}")
+    return model
 
+def main():
+    """Main function for running retrieval and evaluation."""
+    args = setup()
+    
+    logging.info(args)
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
-device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+    # Set device
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    device = torch.device(f"cuda:{args.gpu_id}" if torch.cuda.is_available() else "cpu")
 
+    # Load dataset
+    dataset = args.dataset
+    url = f"https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/{dataset}.zip"
+    out_dir = os.path.join(os.getcwd(), "datasets")
+    data_path = os.path.join(out_dir, dataset)
+    if not os.path.exists(data_path):
+        data_path = util.download_and_unzip(url, out_dir)
+    logging.info(f"Dataset path: {data_path}")
 
-#### Download and load dataset
-dataset = args.dataset
-url = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/{}.zip".format(dataset)
-out_dir = os.path.join(os.getcwd(), "datasets")
-data_path = os.path.join(out_dir, dataset)
-if not os.path.exists(data_path):
-    data_path = util.download_and_unzip(url, out_dir)
-logging.info(data_path)
+    corpus, queries, qrels = GenericDataLoader(data_path).load(split=args.split)
 
-# if args.dataset == 'msmarco': args.split = 'train'
-corpus, queries, qrels = GenericDataLoader(data_path).load(split=args.split)
+    # Load model
+    model = load_model(args)
+    retriever = EvaluateRetrieval(model, score_function=args.score_function, k_values=[args.top_k])
 
-# grp: If you want to use other datasets, you could prepare your dataset as the format of beir, then load it here.
-logging.info("Loading model...")
-if 'contriever' in args.model_code:
-    encoder = Contriever.from_pretrained(MODEL_CODE_TO_MODEL_NAME[args.model_code]).cuda()
-    tokenizer = transformers.BertTokenizerFast.from_pretrained(MODEL_CODE_TO_MODEL_NAME[args.model_code])
-    model = DRES(DenseEncoderModel(encoder, doc_encoder=encoder, tokenizer=tokenizer), batch_size=args.per_gpu_batch_size)
-elif 'dpr' in args.model_code:
-    model = DRES(DPR((MODEL_CODE_TO_MODEL_NAME[args.model_code], MODEL_CODE_TO_MODEL_NAME[args.model_code])), batch_size=args.per_gpu_batch_size, corpus_chunk_size=1000)
-elif 'ance' in args.model_code:
-    model = DRES(models.SentenceBERT(MODEL_CODE_TO_MODEL_NAME[args.model_code]), batch_size=args.per_gpu_batch_size)
-elif 'simcse' in args.model_code:
-    model = AutoModel.from_pretrained(MODEL_CODE_TO_MODEL_NAME[args.model_code])
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_CODE_TO_MODEL_NAME[args.model_code])
-    model = DRES(DenseEncoderModel(model, doc_encoder=model, tokenizer=tokenizer), batch_size=args.per_gpu_batch_size)
-else:
-    raise NotImplementedError
+    # Perform retrieval
+    results = retriever.retrieve(corpus, queries)
 
-logging.info(f"model: {model.model}")
-# pdb.set_trace()
-retriever = EvaluateRetrieval(model, score_function=args.score_function, k_values=[args.top_k]) # "cos_sim"  or "dot" for dot-product
-results = retriever.retrieve(corpus, queries)
-                                            
-logging.info("Printing results to %s"%(args.result_output))
-sub_results = compress(results)
+    # Compress and save results
+    logging.info(f"Saving results to {args.result_output}")
+    compressed_results = compress_results(results)
+    with open(args.result_output, "w") as f:
+        json.dump(compressed_results, f)
 
-with open(args.result_output, 'w') as f:
-    json.dump(sub_results, f)
+if __name__ == "__main__":
+    main()

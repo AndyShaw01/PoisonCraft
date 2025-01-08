@@ -33,7 +33,7 @@ class Config:
         self.domain_index = domain_index
         self.adv_string_length = adv_string_length
 
-    def get_results_path(self, epoch_index, batch_index):
+    def get_results_path(self, epoch_index):
         return (
             f"./results/{self.attack_target}/batch-{self.batch_size}/"
             f"domain_{self.domain_index}/results_{self.adv_string_length}_"
@@ -66,24 +66,23 @@ class BatchSampler:
             yield self.queries_text[i:i + self.batch_size]
 
 
-def save_results_path(config, epoch_index, batch_index):
+def save_results_path(config, epoch_index):
     """
     Save the results path
 
     Args:
         config (Config): Configuration object
         epoch_index (int): Index of the epoch
-        batch_index (int): Index of the batch
 
     Returns:
         str: Save path
     """
-    save_path = config.get_results_path(epoch_index, batch_index)
+    save_path = config.get_results_path(epoch_index)
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     return save_path
 
 
-def gcg_attack_batch(config, args, batch, epoch_index, batch_index):
+def gcg_attack_batch(config, args, epoch_index):
     """
     Run GCG attack on a batch of queries
 
@@ -92,18 +91,15 @@ def gcg_attack_batch(config, args, batch, epoch_index, batch_index):
         args (argparse.Namespace): Arguments
         batch (list): List of queries
         epoch_index (int): Index of the epoch
-        batch_index (int): Index of the batch
 
     Returns:
         None
     """
-    save_path = save_results_path(config, epoch_index, batch_index)
+    save_path = save_results_path(config, epoch_index)
     args.save_path = save_path
     gcg = GCG(args)
-    gcg.question = batch
-    gcg.index = batch_index
     gcg.run(args.attack_info)
-    logging.info(f"Epoch {epoch_index}, Batch {batch_index}: Results saved to {save_path}")
+    logging.info(f"Epoch {epoch_index}, Batch {args.index}: Results saved to {save_path}")
 
 
 def run_epoch(args, epoch_index):
@@ -117,7 +113,9 @@ def run_epoch(args, epoch_index):
     logging.info(f"Starting epoch {epoch_index}")
     batch_sampler = BatchSampler(config.shadow_queries_path, config.batch_size)
     for batch_index, batch in enumerate(batch_sampler):
-        gcg_attack_batch(config, args, batch, epoch_index, batch_index)
+        args.question = batch
+        args.index = batch_index
+        gcg_attack_batch(config, args, epoch_index)
     logging.info(f"Epoch {epoch_index} completed.")
 
 

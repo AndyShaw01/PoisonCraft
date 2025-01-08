@@ -68,6 +68,10 @@ class SentenceEmbeddingModel(nn.Module):
         if "simcse" in self.model_path:
             return model_output.pooler_output
 
+        if "bge" in self.model_path:
+            cls_embeddings = model_output.last_hidden_state[:, 0, :]
+            cls_embeddings = F.normalize(cls_embeddings, p=2, dim=1)
+            return cls_embeddings
         return self.mean_pooling(model_output.last_hidden_state, encoded_input['attention_mask'])
 
     def _prepare_input(self, sentences, input_ids, inputs_embeds):
@@ -95,8 +99,8 @@ if __name__ == "__main__":
     model = SentenceEmbeddingModel(model_path)
     tokenizer = model.tokenizer
     texts = [
-        "There's a kid on a skateboard.",
-        "A kid is skateboarding.",
+        "what is non controlling interest on balance sheet",
+        "When a nonrecourse transaction takes place, the accounts receivable balance is removed from the statement of financial position. The corresponding debits include the expense recorded on the income statement and the proceeds received from the factor.[28]",
         # "A kid is inside the house.",
         "There's a kid on a skateboard."
 

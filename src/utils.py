@@ -1,5 +1,7 @@
+import os
 import json
 import csv
+import subprocess
 import re
 import torch
 import pandas as pd
@@ -154,6 +156,43 @@ def load_frequent_words_as_str(result_file):
     """
     with open(result_file, 'r') as file:
         data = json.load(file)
+    frequent_words = data.get("frequent_words", [])
+    return " ".join(frequent_words)
+
+def load_frequent_words_as_str(result_file, model_code=None):
+    """
+    Load the frequent words from a JSON file and convert them to a single space-separated string.
+    If the file does not exist, generate it using the provided model code.
+
+    Args:
+        result_file (str): Path to the JSON file containing frequent words.
+        model_code (str): Code to specify the model used to generate frequent words.
+
+    Returns:
+        str: A space-separated string of frequent words.
+    """
+    # Check if the result file exists
+    if not os.path.exists(result_file):
+        if model_code is None:
+            raise ValueError("The file does not exist and model_code is not provided to generate it.")
+        
+        # Prepare the command to generate the file
+        cmd = f"python ./experiments/get_frequent_words.py --model_code {model_code}"
+        print(f"File not found. Running command to generate it:\n{cmd}")
+        
+        # Execute the command
+        exit_code = os.system(cmd)
+        if exit_code != 0:
+            raise RuntimeError(f"Failed to generate the file using command: {cmd}")
+    
+    # Load the frequent words from the JSON file
+    try:
+        with open(result_file, 'r') as file:
+            data = json.load(file)
+    except Exception as e:
+        raise RuntimeError(f"Failed to load the JSON file: {e}")
+    
+    # Convert frequent words to a space-separated string
     frequent_words = data.get("frequent_words", [])
     return " ".join(frequent_words)
 
