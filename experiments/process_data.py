@@ -48,7 +48,7 @@ def main(args):
     selected_df['id_order'] = pd.Categorical(selected_df['test_name'], categories=queries_id, ordered=True)
     sorted_df = selected_df.sort_values('id_order').drop(columns='id_order')
 
-    file_path = f'./Datasets/{args.dataset}/ground_truth_topk_{args.retriever}/ground_truth_top_{args.k}_domain_{args.category}.csv'
+    file_path = f'./datasets/{args.dataset}/ground_truth_topk_{args.retriever}/ground_truth_top_{args.k}_domain_{args.domain}.csv'
     if not os.path.exists(os.path.dirname(file_path)): 
         os.makedirs(os.path.dirname(file_path))
 
@@ -62,11 +62,11 @@ if __name__ == "__main__":
     parser.add_argument('--k', type=int, default=19, help='The number of top k results to consider')
     parser.add_argument('--domain', type=int, default=1, help='The category of the queries')
     parser.add_argument('--dataset', choices=['hotpotqa', 'msmarco', 'nq'], default='nq', help='The dataset to process')
-    parser.add_argument('--retriever', choices=['contriever', 'contriever-msmarco', 'ance', 'openai','simcse', 'openai-002', 'openai_3-small','openai_3-large'], default='openai', help='The retriever to process')
+    parser.add_argument('--retriever', choices=['contriever', 'contriever-msmarco', 'ance', 'openai','simcse', 'openai-002', 'openai_3-small','openai_3-large', 'bge-small'], default='bge-small', help='The retriever to process')
 
     args = parser.parse_args()
 
-    args.results_file_path = f'./datasets/{args.dataset}/{args.dataset}-{args.retriever}.json'
+    args.results_file_path = f'./datasets/{args.dataset}/{args.dataset}-{args.retriever}-dot.json'
     
 
     main(args)  
