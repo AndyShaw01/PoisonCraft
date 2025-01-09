@@ -236,7 +236,7 @@ def get_poisoned_info_for_baseline_pr(file_path):
         suffix_db.append(query + ' ' + context5)
     return suffix_db
 
-def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_info, retriever, dataset):
+def get_poisoned_info_for_main_result_exp(domain_list, control_str_len_list, attack_info, retriever, dataset):
     """
     Load injected queries for the main results.
 
@@ -274,6 +274,39 @@ def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_
                 suffix_all[control_str_len] = attack_suffix
                 all_list += attack_suffix
     return all_list
+
+
+def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_info, retriever, dataset):
+    """
+    Load injected queries for the main results.
+
+    Args:
+        domain_list (list): List of domain names.
+        control_str_len_list (list): List of control string lengths.
+        attack_info (str): Attack information.
+        retriever (str): The retriever type.
+        dataset (str): The dataset name.
+
+    Returns:
+        dict, list: Dictionary of suffixes for each control string length, and a list of all suffixes.
+    """
+    suffix_all = {}
+    all_list = []
+    exp_list = ['batch-4'] 
+    for domain in domain_list:
+        for control_str_len in control_str_len_list:
+            for exp in exp_list:
+                # candidate_file = f'./results/{retriever}/{dataset}/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
+                candidate_file = f'./results/{dataset}/{exp}/domain_{domain}/results_{control_str_len}_epoch_0.csv'
+                try:
+                    df = pd.read_csv(candidate_file)
+                except:
+                    continue
+                attack_suffix = [attack_info + ' ' + x for x in df['adv_suffix'].tolist()]
+                suffix_all[control_str_len] = attack_suffix
+                all_list += attack_suffix
+    return all_list
+
 
 def batch_process_embeddings(embedding_model, texts, batch_size=32):
     """

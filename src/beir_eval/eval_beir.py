@@ -43,9 +43,10 @@ class CustomDEModel:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModel.from_pretrained(model_path).to(self.device)
-        self.batch_size = kwargs.get("batch_size", 32)
-        self.max_length = kwargs.get("max_length", 32)
+        self.batch_size = kwargs.get("batch_size", 128)
+        self.max_length = kwargs.get("max_length", 128)
         self.normalize_embeddings = kwargs.get("normalize_embeddings", True)
+        self.sentence_embedding_mode = kwargs.get("sentence_embedding_mode", "cls") # cls, mean, max
 
     def encode_queries(self, queries: List[str], batch_size: int = None, **kwargs) -> np.ndarray:
         """
@@ -68,7 +69,12 @@ class CustomDEModel:
                     max_length=self.max_length, return_tensors="pt"
                 ).to(self.device)
                 outputs = self.model(**inputs)
-                embeddings = outputs.last_hidden_state[:, 0, :]  # Use [CLS] token embeddings
+                if self.sentence_embedding_mode == "cls":
+                    embeddings = outputs.last_hidden_state[:, 0, :]  # Use [CLS] token embeddings
+                elif self.sentence_embedding_mode == "mean":
+                    embeddings = outputs.last_hidden_state.mean(dim=1)
+                elif self.sentence_embedding_mode == "max":
+                    embeddings = outputs.last_hidden_state.max(dim=1).values
                 if self.normalize_embeddings:
                     embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
                 query_embeddings.append(embeddings.cpu().numpy())
@@ -168,11 +174,12 @@ def load_model(args) -> DRES:
         )
     elif 'ance' in model_code:
         model = DRES(models.SentenceBERT(MODEL_CODE_TO_MODEL_NAME[model_code]), batch_size=args.per_gpu_batch_size, max_length=128, normalize_embeddings=True)
-    elif 'simcse' in model_code or 'bge' in model_code:
-        # encoder = AutoModel.from_pretrained(MODEL_CODE_TO_MODEL_NAME[model_code])
-        # tokenizer = AutoTokenizer.from_pretrained(MODEL_CODE_TO_MODEL_NAME[model_code])
+    elif 'simcse' in model_code:
         model_path = MODEL_CODE_TO_MODEL_NAME[args.model_code]
-        model = DRES(CustomDEModel(model_path), batch_size=args.per_gpu_batch_size)
+        model = DRES(CustomDEModel(model_path, sentence_embedding_mode='mean'), batch_size=args.per_gpu_batch_size)
+    elif 'bge' in model_code:
+        model_path = MODEL_CODE_TO_MODEL_NAME[args.model_code]
+        model = DRES(CustomDEModel(model_path, sentence_embedding_mode='cls'), batch_size=args.per_gpu_batch_size)
     else:
         raise NotImplementedError(f"Model code '{model_code}' is not implemented.")
     

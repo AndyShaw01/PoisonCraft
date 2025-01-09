@@ -26,16 +26,17 @@ class Config:
         domain_index (int): Index of the domain to attack.
         adv_string_length (int): Length of the adversarial string.
     """
-    def __init__(self, shadow_queries_path, attack_target, batch_size, domain_index, adv_string_length):
+    def __init__(self, shadow_queries_path, attack_target, batch_size, domain_index, adv_string_length, retriever):
         self.shadow_queries_path = shadow_queries_path
         self.attack_target = attack_target
         self.batch_size = batch_size
         self.domain_index = domain_index
         self.adv_string_length = adv_string_length
+        self.retriever = retriever
 
     def get_results_path(self, epoch_index):
         return (
-            f"./results/{self.attack_target}/batch-{self.batch_size}/"
+            f"./results/adv_suffix/{self.retriever}/{self.attack_target}/batch-{self.batch_size}/"
             f"domain_{self.domain_index}/results_{self.adv_string_length}_"
             f"epoch_{epoch_index}.csv"
         )
@@ -108,7 +109,7 @@ def run_epoch(args, epoch_index):
     """
     config = Config(
         args.shadow_queries_path, args.attack_target, args.batch_size,
-        args.domain_index, args.adv_string_length
+        args.domain_index, args.adv_string_length, args.retriever
     )
     logging.info(f"Starting epoch {epoch_index}")
     batch_sampler = BatchSampler(config.shadow_queries_path, config.batch_size)
@@ -148,7 +149,7 @@ def gcg_attack(args, epoch_times=1):
     """
     config = Config(
         args.shadow_queries_path, args.attack_target, args.batch_size,
-        args.domain_index, args.adv_string_length
+        args.domain_index, args.adv_string_length, args.retriever
     )
     if epoch_times > 1:
         processes = []
