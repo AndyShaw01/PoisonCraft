@@ -1,6 +1,5 @@
 *.out
 *.log
-*.txt
 *.json
 *.jsonl
 *.tsv
@@ -16,3 +15,5 @@ baselines
 eval_result
 TestLLM
 pic
+write_readme.txt
+Prompts
