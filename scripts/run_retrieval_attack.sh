@@ -15,4 +15,4 @@ TARGET_THRESHOLD=4
 LOG_PATH="logs/main_result/${RETRIEVER}/${TARGET_DATASET}"
 mkdir -p "$LOG_PATH"
 
-python -u $PYTHON_SCRIPT --target_dataset $TARGET_DATASET --retriever $RETRIEVER --device $DEVICE > $LOG_PATH/bge-small.log  2>&1 &
+python -u $PYTHON_SCRIPT --target_dataset $TARGET_DATASET --retriever $RETRIEVER --device $DEVICE > $LOG_PATH/bge-small-all.log  2>&1 &

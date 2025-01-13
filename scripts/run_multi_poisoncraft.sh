@@ -2,7 +2,7 @@
 
 BASH_SCRIPT="./scripts/run_poisoncraft.sh"
 DOMAIN_LIST="1,2,3,4,5,6,7,8,9,10,11,12,13,14" # ,2,3,4,5,6,7,8,9,10,11,12,13,14"
-ADV_LENGTH_LIST="55,65,75,85" #,55,60,65,70,75,80,85"
+ADV_LENGTH_LIST="50,60,70,80" #,55,60,65,70,75,80,85"
 GPU_LIST="0,1,2,3"
 for DOMAIN_ID in $(echo $DOMAIN_LIST | sed "s/,/ /g")
 do
