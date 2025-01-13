@@ -26,6 +26,9 @@ MODEL_CODE_TO_MODEL_NAME = {
     "bge-unsp": "/data1/shaoyangguang/offline_model/bge-m3-unsupervised",
 }
 
+# 
+TEST_DATASETS = {"nq":2762, "hotpotqa":5924}
+
 # MODEL_CODE_TO_CMODEL_NAME = MODEL_CODE_TO_QMODEL_NAME.copy()
 
 # File processing functions
@@ -292,12 +295,12 @@ def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_
     """
     suffix_all = {}
     all_list = []
-    exp_list = ['batch-4'] 
+    exp_list = ['batch-4-stage1', 'batch-4-stage2'] 
     for domain in domain_list:
         for control_str_len in control_str_len_list:
             for exp in exp_list:
                 # candidate_file = f'./results/{retriever}/{dataset}/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
-                candidate_file = f'./results/{dataset}/{exp}/domain_{domain}/results_{control_str_len}_epoch_0.csv'
+                candidate_file = f'./results/adv_suffix/{retriever}/{dataset}/{exp}/domain_{domain}/results_{control_str_len}_epoch_0.csv'
                 try:
                     df = pd.read_csv(candidate_file)
                 except:
