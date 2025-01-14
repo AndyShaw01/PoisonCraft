@@ -1,10 +1,12 @@
 # PoisonCraft
 
-This repository provides the official implementation of PosionCraft: Practical Poisoning of Retrieval-Augmented Generation for Large Language Models.
+This repository provides the official implementation of **POISONCRAFT: Practical Poisoning of Retrieval-Augmented Generation for Large Language Models.**
 
 # Overview
 
-POISONCRAFT aims to demonstrate how a malicious actor can plant “poisoned” content into the corpus used by Retrieval-Augmented Generation (RAG) pipelines, thereby misleading a Large Language Model into hallucinating or referencing malicious content. This codebase provides scripts to:
+![Framework](./images/framework.png)
+
+**POISONCRAFT** aims to demonstrate how a malicious actor can plant “poisoned” content into the corpus used by Retrieval-Augmented Generation (RAG) pipelines, thereby misleading a Large Language Model into hallucinating or referencing malicious content. This codebase provides scripts to:
 
 - Prepare and preprocess standard datasets (e.g., Natural Questions, MS MARCO, HotpotQA).
 
@@ -12,32 +14,46 @@ POISONCRAFT aims to demonstrate how a malicious actor can plant “poisoned” c
 
 - Evaluate the poisoning effectiveness under different retrievers (e.g., Contriever, SimCSE, and BGE) and measure transferability.
 
-![Framework](./images/framework.png)
 
-# Quick Start
+
+# Quick Usage
 ## Environment Setup
 
 Below is a high-level guide to configuring the environment. The exact requirements are listed in requirements.txt. We recommend creating a new virtual environment to avoid conflicts:
 
 ```bash
 # Example using conda
-conda create -n poisoncraft python=3.10
-conda activate poisoncraft
+conda create -n PoisonCraft python=3.10
+conda activate PoisonCraft
 
 # Install dependencies
+pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
 
+## Set API Key and Model Configuration
+
+Certain parts of this project, such as domain classification and query categorization, rely on API calls (e.g., OpenAI GPT models). You need to configure the API key and model settings as follows:
+
+1. Navigate to the src/models_configs/ directory.
+2. Locate the appropriate configuration file (e.g., gpt3.5_config.py).
+3. Update the api_keys field with your API key:
+    ```json
+    "api_key_info": {
+        "api_keys": ["your_openai_api_key"],
+        "api_key_use": 0
+    }
+    ```
+Note: This project supports multiple LLM providers (e.g., OpenAI, Llama, and PaLM2). Ensure you select the appropriate configuration file for your model.
 ## How to Run the Code
 
 We provide various bash scripts under the scripts folder for different stages of the pipeline. Below is a step-by-step reference:
 
 ### Preparing the Datasets
 
-1.	Download & Preprocess
+**1. Download and Prepare Datasets**
 
 Run scripts/run_prepare_dataset.sh to download and unzip the datasets, and to create training/test splits:
-
 ```bash
 bash scripts/run_prepare_dataset.sh
 ```
@@ -46,16 +62,25 @@ This script internally calls:
 - experiments/prepare_datasets.py
 - experiments/classify_queries_by_domain.py (for domain classification, if needed)
 
-You can find the 
+**2. Preprocess Datasets**
 
-2. Further Preprocessing
-
-If you want to process data (for instance, calculating ground-truth top-k similarity scores for each domain), run:
-
+To calculate top-k ground truth similarity scores for each domain, run:
 ```bash
 bash scripts/run_process_data.sh
 ```
-This script calls experiments/process_data.py.
+
+**3. [Optional]Evaluating BEIR for Ground Truth**
+
+Execute this step only if you want to evaluate retriever model, and it will take a while. You can follow these steps:
+
+1. Run the BEIR evaluation script to compute retrieval results:
+    ```bash
+    python src/beir_eval/eval_beir.py --model_code bge-small --dataset nq --top_k 100
+    ```
+2. Use the retrieved results to generate ground truth scores:
+    ```bash
+    bash scripts/run_process_data.sh
+    ```
 
 ### Poisoning Attack Training
 
@@ -89,13 +114,16 @@ Alternatively, for LLM-level evaluation (i.e., final text generation with top-k 
 ```bash
 bash scripts/run_target_attack.sh
 ```
+### Results and Logging
+- Logs are stored in the logs/ directory.
+- Results (e.g., poisoned queries and attack success rates) are saved in the results/ directory.
 
 # Acknowledgement
 
-- The model part of our code is from [Open-Prompt-Injection](https://github.com/liu00222/Open-Prompt-Injection).
-- Our code used the implementation of [PoisonedRAG](https://github.com/sleeepeer/PoisonedRAG)
-- Our code used [beir](https://github.com/beir-cellar/beir) benchmark.
-- Our code used [contriever](https://github.com/facebookresearch/contriever) for retrieval augmented generation (RAG).
-- Our code used the implementation of [llms-attacks](https://github.com/llm-attacks/llm-attacks)
+- [Open-Prompt-Injection](https://github.com/liu00222/Open-Prompt-Injection): The foundational model code is based on this repository.
+- [PoisonedRAG](https://github.com/sleeepeer/PoisonedRAG): Some implementations were adapted from this project.
+- [Beir Benchmark](https://github.com/beir-cellar/beir): Used as a benchmark framework for evaluation.
+- [Contriever](https://github.com/facebookresearch/contriever): Utilized for Retrieval-Augmented Generation (RAG) capabilities.
+- [llms-attacks](https://github.com/llm-attacks/llm-attacks): Certain implementations for adversarial training were derived from this repository.
 
 <!-- # Citation -->
