@@ -16,20 +16,18 @@ RAG_PROMPT_TEMPLATE = (
 
 # Mapping of model codes to model paths
 MODEL_CODE_TO_MODEL_NAME = {
-    "contriever": "/data1/shaoyangguang/offline_model/contriever",
-    "contriever-msmarco": "/data1/shaoyangguang/offline_model/contriever-msmarco",
-    "dpr-single": "/data1/shaoyangguang/offline_model/dpr-question_encoder-single-nq-base",
-    "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
-    "ance": "/data1/shaoyangguang/offline_model/ance",
-    "simcse": "/data1/shaoyangguang/offline_model/simcse",
-    "bge-small": "/data1/shaoyangguang/offline_model/bge-small-en-v1.5",
-    "bge-unsp": "/data1/shaoyangguang/offline_model/bge-m3-unsupervised",
+    "contriever": "facebook/contriever",
+    "contriever-msmarco": "facebook/contriever-msmarco",
+    "dpr-single": "facebook/dpr-question_encoder-single-nq-base",
+    "dpr-multi": "facebook/dpr-question_encoder-multiset-base",
+    "ance": "Luyu/ANCE-MSMarco",
+    "simcse": "princeton-nlp/unsup-simcse-bert-base-uncased",
+    "bge-small": "BAAI/bge-small-en",
+    "bge-unsp": "BAAI/bge-base-en-uncased"
 }
 
 # 
 TEST_DATASETS = {"nq":2762, "hotpotqa":5924}
-
-# MODEL_CODE_TO_CMODEL_NAME = MODEL_CODE_TO_QMODEL_NAME.copy()
 
 # File processing functions
 def load_json(file_path):

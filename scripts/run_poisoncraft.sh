@@ -12,13 +12,11 @@ ATTACK_BATCH_SIZE=4
 LOSS_THRESHOLD=0.2
 
 if [ "$RETRIEVER" = "contriever" ]; then
-    MODEL_PATH="/data1/shaoyangguang/offline_model/contriever"
-elif [ "$RETRIEVER" = "ance" ]; then
-    MODEL_PATH="/data1/shaoyangguang/offline_model/ance"
+    MODEL_PATH="facebook/contriever"
 elif [ "$RETRIEVER" = "simcse" ]; then
-    MODEL_PATH="/data1/shaoyangguang/offline_model/simcse"
+    MODEL_PATH="princeton-nlp/unsup-simcse-bert-base-uncased"
 elif [ "$RETRIEVER" = "bge-small" ]; then
-    MODEL_PATH="/data1/shaoyangguang/offline_model/bge-small-en-v1.5"
+    MODEL_PATH="BAAI/bge-small-en"
 fi
 
 LOG_PATH="logs/${RETRIEVER}_on_${DATASET}/domain_${DOMAIN_INDEX}_control_${ADV_LENGTH}"
