@@ -1,0 +1,7 @@
+beir
+openai
+google-generativeai
+datasets==2.19.0
+sentence-transformers==3.0.1
+transformers==4.44.2
+pandas

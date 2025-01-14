@@ -1,15 +1,10 @@
 *.out
 *.log
-*.txt
 *.json
 *.jsonl
 *.tsv
 *.csv
 *__pycache__/
-get_base_token
-XLLM-161C
-PoisonedRAG-main
-TestLLM
 *.tar.gz
 *.zip
 Results
@@ -19,3 +14,4 @@ eval_result
 results_old
 result
 pic
+
