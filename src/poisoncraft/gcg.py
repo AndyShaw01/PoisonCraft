@@ -10,7 +10,7 @@ import pdb
 
 from copy import deepcopy
 
-from src.GCG.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
+from src.poisoncraft.gcg_utils import get_nonascii_toks, get_embedding_weight, get_embeddings, get_fixed_list
 from src.embedding.sentence_embedding import SentenceEmbeddingModel
 
 MAX_LOSS = 999999
