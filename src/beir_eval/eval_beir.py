@@ -18,13 +18,14 @@ from contriever_src.beir_utils import DenseEncoderModel
 
 # Mapping model codes to model paths
 MODEL_CODE_TO_MODEL_NAME = {
-    "contriever": "/data1/shaoyangguang/offline_model/contriever",
-    "contriever-msmarco": "/data1/shaoyangguang/offline_model/contriever-msmarco",
-    "dpr-single": "/data1/shaoyangguang/offline_model/dpr-question_encoder-single-nq-base",
-    "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
-    "ance": "/data1/shaoyangguang/offline_model/ance",
-    "simcse": "/data1/shaoyangguang/offline_model/simcse",
-    "bge-small": "/data1/shaoyangguang/offline_model/bge-small-en-v1.5",
+    "contriever": "facebook/contriever",
+    "contriever-msmarco": "facebook/contriever-msmarco",
+    "dpr-single": "facebook/dpr-question_encoder-single-nq-base",
+    "dpr-multi": "facebook/dpr-question_encoder-multiset-base",
+    "ance": "Luyu/ANCE-MSMarco",
+    "simcse": "princeton-nlp/unsup-simcse-bert-base-uncased",
+    "bge-small": "BAAI/bge-small-en",
+    "bge-unsp": "BAAI/bge-base-en-uncased"
 }
 
 import numpy as np

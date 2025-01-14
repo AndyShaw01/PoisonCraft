@@ -26,7 +26,7 @@ def setup():
     parser.add_argument("--target_dataset", choices=['hotpotqa', 'nq', 'msmarco'], default='nq', help="The target dataset for the retrieval attack.")
     parser.add_argument("--target_dataset_len", type=int, help="The length of the target dataset.")
     parser.add_argument("--queries_folder", type=str, default="./datasets/nq/domain/test_domains_14", help="Path to the folder containing the queries.")
-    parser.add_argument("--model_path", type=str, default="/data1/shaoyangguang/offline_model/contriever", help="Path to the sentence embedding model.")
+    parser.add_argument("--model_path", type=str, default="/data1/usr/offline_model/contriever", help="Path to the sentence embedding model.")
     parser.add_argument("--retriever", choices=['contriever', 'contriever-msmarco', 'simcse', 'bge-small'], default='bge-small')
     parser.add_argument("--query_block_size", type=int, default=2048)
     parser.add_argument("--attack_block_size", type=int, default=2048)

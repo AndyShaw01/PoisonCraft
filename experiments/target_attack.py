@@ -33,7 +33,7 @@ def setup():
     parser.add_argument('--top_k', type=int, default=4)
     parser.add_argument('--use_truth', type=str, default='False')
     parser.add_argument('--gpu_id', type=int, default=0)
-    parser.add_argument("--embedding_model_path", type=str, default="/data1/shaoyangguang/offline_model/contriever-msmarco")
+    parser.add_argument("--embedding_model_path", type=str, default="/data1/usr/offline_model/contriever-msmarco")
 
     # attack
     parser.add_argument('--score_function', type=str, default='dot', choices=['dot', 'cos_sim'])
@@ -83,7 +83,7 @@ def setup():
     # set up the paths
     args.queries_folder = f"./Datasets/{args.eval_dataset}/domain/test_domains_14"
     args.orig_beir_results = f"Datasets/{args.eval_dataset}/{args.eval_dataset}-{args.retriever}.json"
-    args.embedding_model_path = f"/data1/shaoyangguang/offline_model/{args.retriever}"
+    args.embedding_model_path = f"/data1/usr/offline_model/{args.retriever}"
     if args.retriever == 'simcse':
         args.score_function = 'cos_sim'
 
