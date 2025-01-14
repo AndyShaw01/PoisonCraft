@@ -71,7 +71,7 @@ bash scripts/run_process_data.sh
 
 **3. [Optional]Evaluating BEIR for Ground Truth**
 
-Execute this step only if you want to evaluate retriever model, and it will take a while. You can follow these steps:
+Execute this step only if you want to evaluate a retriever model, as it may take considerable time. Follow these steps:
 
 1. Run the BEIR evaluation script to compute retrieval results:
     ```bash
