@@ -4,7 +4,7 @@ import pdb
 
 sys.path.append(os.path.abspath('../RAGInjection/'))
 
-from src.GCG.run_gcg import gcg_attack
+from src.poisoncraft.run_gcg import gcg_attack
 from src.utils import load_frequent_words_as_str
 
 import argparse

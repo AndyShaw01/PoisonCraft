@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RETRIEVER="bge-small"
-PYTHON_EXP_SCRIPT="experiments/gcg_exp.py"
+PYTHON_EXP_SCRIPT="experiments/poisoncraft_exp.py"
 
 DOMAIN_INDEX=$1
 DATASET="nq" # msmarco
