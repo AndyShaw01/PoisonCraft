@@ -7,7 +7,7 @@ import logging
 import argparse
 import pdb
 
-from src.GCG.gcg import GCG
+from src.poisoncraft.gcg import GCG
 
 multiprocessing.set_start_method('spawn', force=True)
 console_lock = multiprocessing.Lock()
