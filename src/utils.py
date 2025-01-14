@@ -114,7 +114,7 @@ def create_model(model_path):
     """
     Factory method to create a LLM instance
     """
-    api_key = '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'
+    api_key = 'sk-proj-'
     model = GPTModel(api_key=api_key, model_path=model_path)
     return model
 

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export all_proxy=socks5://192.168.112.1:7890
-
 PYTHON_SCRIPT_PREPARE_DATASET="experiments/prepare_datasets.py"
 PYTHON_SCRIPT_CLASSIFY_QUERIES="experiments/classify_queries_by_domain.py"
 
