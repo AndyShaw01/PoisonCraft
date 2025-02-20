@@ -1,9 +1,9 @@
 *.out
 *.log
-*.json
-*.jsonl
-*.tsv
-*.csv
+# *.json
+# *.jsonl
+# *.tsv
+# *.csv
 *__pycache__/
 *.tar.gz
 *.zip
@@ -17,3 +17,6 @@ TestLLM
 pic
 write_readme.txt
 Prompts
+datasets_bk
+dast
+Main_Results
