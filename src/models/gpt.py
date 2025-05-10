@@ -12,7 +12,7 @@ class GPTModel(BaseModel):
         self.client = OpenAI(api_key=api_keys[api_pos])
 
     def query(self, msg):
-        try:
+        try:    
             completion = self.client.chat.completions.create(
                 model=self.name,
                 temperature=self.temperature,

@@ -16,17 +16,15 @@ RAG_PROMPT_TEMPLATE = (
 
 # Mapping of model codes to model paths
 MODEL_CODE_TO_MODEL_NAME = {
-    "contriever": "/data1/shaoyangguang/offline_model/contriever",
-    "contriever-msmarco": "/data1/shaoyangguang/offline_model/contriever-msmarco",
-    "dpr-single": "/data1/shaoyangguang/offline_model/dpr-question_encoder-single-nq-base",
-    "dpr-multi": "/data1/shaoyangguang/offline_model/dpr-question_encoder-multiset-base",
-    "ance": "/data1/shaoyangguang/offline_model/ance",
-    "simcse": "/data1/shaoyangguang/offline_model/simcse",
-    "bge-small": "/data1/shaoyangguang/offline_model/bge-small-en-v1.5",
-    "bge-unsp": "/data1/shaoyangguang/offline_model/bge-m3-unsupervised",
+    "contriever": "facebook/contriever",
+    "simcse": "princeton-nlp/unsup-simcse-bert-base-uncased",
 }
 
-# 
+MODEL_PATH_TO_MODEL_CONFIG = {
+    "gpt4o-mini": "./src/models/gpt4o_mini_config.json",
+    "deepseek-reasoner": "./src/models/deepseek_r1_config.json"
+}
+
 TEST_DATASETS = {"nq":2762, "hotpotqa":5924}
 
 # MODEL_CODE_TO_CMODEL_NAME = MODEL_CODE_TO_QMODEL_NAME.copy()
@@ -116,8 +114,14 @@ def create_model(model_path):
     """
     Factory method to create a LLM instance
     """
-    api_key = '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'
-    model = GPTModel(api_key=api_key, model_path=model_path)
+    # map the model_path to the model path
+    config_path = MODEL_PATH_TO_MODEL_CONFIG[model_path]
+    config = load_json(config_path)
+    if model_path == "gpt4o-mini":
+        model = GPTModel(config)
+    elif model_path == "deepseek-reasoner":
+        model = DeepSeek(config)
+    
     return model
 
 # Model utility functions
@@ -133,13 +137,9 @@ def cosine_similarity(query_embeddings, doc_embeddings):
         torch.Tensor: Cosine similarity between queries and documents, shape (x, n)
     """
     # Normalize the query and document embeddings
-    query_norm = query_embeddings / query_embeddings.norm(dim=-1, keepdim=True)  # (x, d)
-    doc_norm = doc_embeddings / doc_embeddings.norm(dim=-1, keepdim=True)       # (n, d)
+    query_norm = query_embeddings / query_embeddings.norm(dim=-1, keepdim=True) 
+    doc_norm = doc_embeddings / doc_embeddings.norm(dim=-1, keepdim=True)       
 
-    # Calculate the cosine similarity
-    # query_norm: (x, d)
-    # doc_norm.t(): (d, n)
-    # similarity: (x, n)
     similarity = torch.mm(query_norm, doc_norm.t())
     return similarity
 
@@ -199,86 +199,6 @@ def load_frequent_words_as_str(result_file, model_code=None):
     frequent_words = data.get("frequent_words", [])
     return " ".join(frequent_words)
 
-def get_poisoned_info_for_baseline_pj(dataset):
-    """
-    Load injected queries for prompt injection baseline.
-
-    Args:
-        dataset (str): The dataset name.
-
-    Returns:
-        list: List of injected queries.
-    """
-    file_path = f'./Main_Results/baseline/prompt_injection/{dataset}/shadow_queries.csv'
-    df = pd.read_csv(file_path)
-    return df['injected_query'].tolist()
-
-def get_poisoned_info_for_baseline_pr(file_path):
-    """
-    Load and merge contexts for poisonedRAG baseline.
-
-    Args:
-        file_path (str): Path to the CSV file containing queries and contexts.
-
-    Returns:
-        list: List of merged query and context strings.
-    """
-    df = pd.read_csv(file_path)
-    suffix_db = []
-    for i in range(len(df)):
-        query = df['query'][i]
-        context1 = df['context1'][i]
-        context2 = df['context2'][i]
-        context3 = df['context3'][i]
-        context4 = df['context4'][i]
-        context5 = df['context5'][i]
-        suffix_db.append(query + ' ' + context1)
-        suffix_db.append(query + ' ' + context2)
-        suffix_db.append(query + ' ' + context3)
-        suffix_db.append(query + ' ' + context4)
-        suffix_db.append(query + ' ' + context5)
-    return suffix_db
-
-def get_poisoned_info_for_main_result_exp(domain_list, control_str_len_list, attack_info, retriever, dataset):
-    """
-    Load injected queries for the main results.
-
-    Args:
-        domain_list (list): List of domain names.
-        control_str_len_list (list): List of control string lengths.
-        attack_info (str): Attack information.
-        retriever (str): The retriever type.
-        dataset (str): The dataset name.
-
-    Returns:
-        dict, list: Dictionary of suffixes for each control string length, and a list of all suffixes.
-    """
-    suffix_all = {}
-    all_list = []
-    if retriever == 'contriever' and dataset == 'nq':
-        exp_list = ['improve_gcg_test']
-    else:
-        exp_list = ['batch-4-stage1', 'batch-4-stage2'] 
-    for domain in domain_list:
-        for control_str_len in control_str_len_list:
-            for exp in exp_list:
-                if retriever == 'contriever':
-                    if dataset == 'nq':
-                        candidate_file = f'./results_from_A800/part_results/Results/{exp}/batch-4/category_{domain}/results_{control_str_len}.csv'
-                    elif dataset == 'hotpotqa':
-                        candidate_file = f'./Main_Results/contriever/{dataset}_1126/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
-                else:
-                    candidate_file = f'./Main_Results/{retriever}/{dataset}/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
-                try:
-                    df = pd.read_csv(candidate_file)
-                except:
-                    continue
-                attack_suffix = [attack_info + ' ' + x for x in df['control_suffix'].tolist()]
-                suffix_all[control_str_len] = attack_suffix
-                all_list += attack_suffix
-    return all_list
-
-
 def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_info, retriever, dataset):
     """
     Load injected queries for the main results.
@@ -299,8 +219,7 @@ def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_
     for domain in domain_list:
         for control_str_len in control_str_len_list:
             for exp in exp_list:
-                # candidate_file = f'./results/{retriever}/{dataset}/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
-                candidate_file = f'./results/adv_suffix/{retriever}/{dataset}/{exp}/domain_{domain}/results_{control_str_len}_epoch_0.csv'
+                candidate_file = f'./results/{retriever}/{dataset}/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
                 try:
                     df = pd.read_csv(candidate_file)
                 except:
@@ -325,8 +244,7 @@ def batch_process_embeddings(embedding_model, texts, batch_size=32):
     """
     embeddings = []
     for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
-        batch_embeddings = embedding_model(batch)
+        batch_embeddings = embedding_model(texts[i:i+batch_size])   
         embeddings.append(batch_embeddings)
     return torch.cat(embeddings, dim=0)
 
@@ -351,3 +269,6 @@ def load_beir_data(args):
     else:
         raise ValueError(f"Invalid eval_dataset: {args.eval_dataset}")
     return queries, corpus, qrels
+
+
+# if __name__ == "__main__":
