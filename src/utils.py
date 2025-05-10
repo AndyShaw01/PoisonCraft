@@ -83,11 +83,18 @@ class MatchPredictor(Predictor):
     def __init__(self, match_target):
         super().__init__(path=None)
         self.match_target = match_target
+        self.match_regex = re.compile(re.escape(self.match_target), re.IGNORECASE)
 
-    def predict(self, sequences):
-        match_regex = re.compile(re.escape(self.match_target), re.IGNORECASE)
-        results = int(bool(match_regex.search(sequences)))
-        return results
+    def predict(self, sequences, is_reasoner=False):
+        if is_reasoner:
+            answer_match = re.search(r"\[Answer\]:(.*)", sequences, re.DOTALL | re.IGNORECASE)
+            if not answer_match:
+                return 0
+            content = answer_match.group(1).strip()
+        else:
+            content = sequences
+
+        return int(bool(self.match_regex.search(content)))
 
 # Prompt wrapping functions
 def wrap_prompt(question, context, prompt_id=1) -> str:
