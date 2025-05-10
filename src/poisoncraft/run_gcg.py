@@ -158,7 +158,7 @@ def gcg_attack(args, epoch_times=1):
             p.start()
             processes.append(p)
         for p in processes:
-            p.join()  # 设置超时时间，例如 600 秒
+            p.join() 
         logging.info("All epochs completed.")
         merge_results(config, epoch_times)
     else:
@@ -172,7 +172,6 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, help="Number of queries to attack in each batch.")
     parser.add_argument("--domain_index", type=int, help="Index of the domain to attack.")
     parser.add_argument("--adv_string_length", type=int, help="Length of the control string.")
-    # parser.add_argument("--target", type=str, help="The target of the attack.")
     parser.add_argument("--epoch_times", type=int, default=1, help="Number of epochs to run.")
     args = parser.parse_args()
 

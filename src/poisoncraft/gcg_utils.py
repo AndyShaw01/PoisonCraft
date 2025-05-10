@@ -82,14 +82,10 @@ def get_embeddings(model, input_ids):
         raise ValueError(f"Unknown model type: {type(model)}")
  
 def get_fixed_list(model_path):
-    if 'MPNetModel' in model_path:
+    if 'contriever' in model_path:
         return ['!']
-    elif 't5' in model_path:
+    elif 'simcse' in model_path:
         return ['*']
-    elif 'contriever' in model_path:
-        return ['!']
-    elif 'ance' in model_path:
-        return ['!']
     else:
         raise ValueError(f"Unknown model type: {model_path}")
     

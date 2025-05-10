@@ -171,12 +171,10 @@ class GCG:
         for i in range(adv_cand.shape[0]):
             try:
                 decoded_str = tokenizer.decode(adv_cand[i], skip_special_tokens=True)
-                # print("decoded_str": decoded_str)
                 encoded_toks = tokenizer(decoded_str, add_special_tokens=False).input_ids
                 encoded_toks = torch.tensor(encoded_toks, device=adv_cand.device)
 
                 if len(adv_cand[i]) == len(encoded_toks) and not torch.all(torch.eq(adv_cand[i], curr_adv)):
-                    # Important! add this to mitagate the situation that the encoded_tok is not equal to the origin one
                     if torch.all(torch.eq(adv_cand[i], encoded_toks)):
                         cands.append(adv_cand[i])
                     else:
@@ -315,10 +313,9 @@ class GCG:
         while len(optim_prompts) < self.max_successful_prompt and attack_attempt < self.max_attack_attempts and attack_steps < self.max_attack_steps:
             attack_attempt += 1
             logging.info(f"Starting attack attempt {attack_attempt}")
-            # Initialize adversarial tokens.
             adv_str, adv_tokens = self.init_adv_suffix()
 
-            target_poison = f"{target} {adv_str}" if not self.no_space else f"{target}{adv_str}" # target_poison = fixed_target + adv_str
+            target_poison = f"{target} {adv_str}" if not self.no_space else f"{target}{adv_str}" 
             target_tokens = self.tokenizer(target_poison).input_ids
             input_ids = torch.tensor(target_tokens, device=self.device)
 
@@ -326,7 +323,6 @@ class GCG:
             fixed_slice = slice(1, len(fixed_tokens) - 1)            
             adv_slice = slice(fixed_slice.stop, len(target_tokens) - 1)
             adv_tokens = torch.tensor(target_tokens[adv_slice], device=self.device)
-            # when random is true, sometimes the adversarial token will not be tokenized as expected length
             assert len(adv_tokens) == self.adv_string_length, f"Control tokens length is {len(adv_tokens)}"
             
             logging.info(f"Question string: {self.question}")
