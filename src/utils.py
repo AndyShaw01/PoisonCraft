@@ -1,11 +1,12 @@
 import os
 import json
 import csv
-import subprocess
+import pdb
 import re
 import torch
 import pandas as pd
-from src.models.gpt import GPTModel,DeepSeekModel
+from src.models.gpt import GPTModel
+from src.models.deepseek import DeepSeekModel
 
 # Predefined prompt template
 RAG_PROMPT_TEMPLATE = (
@@ -17,12 +18,13 @@ RAG_PROMPT_TEMPLATE = (
 # Mapping of model codes to model paths
 MODEL_CODE_TO_MODEL_NAME = {
     "contriever": "facebook/contriever",
-    "simcse": "princeton-nlp/unsup-simcse-bert-base-uncased",
+    # "simcse": "princeton-nlp/unsup-simcse-bert-base-uncased",
+    "simcse" : "/data1/shaoyangguang/offline_model/simcse"
 }
 
 MODEL_PATH_TO_MODEL_CONFIG = {
-    "gpt4o-mini": "./src/models/gpt4o_mini_config.json",
-    "deepseek-reasoner": "./src/models/deepseek_r1_config.json"
+    "gpt4o-mini": "./src/model_configs/gpt4o_mini_config.json",
+    "deepseek-reasoner": "./src/model_configs/deepseek_config.json"
 }
 
 TEST_DATASETS = {"nq":2762, "hotpotqa":5924}
@@ -113,6 +115,7 @@ def create_model(model_path):
     """
     Factory method to create a LLM instance
     """
+    pdb.set_trace()
     # map the model_path to the model path
     config_path = MODEL_PATH_TO_MODEL_CONFIG[model_path]
     config = load_json(config_path)
@@ -217,12 +220,12 @@ def get_poisoned_info_for_main_result(domain_list, control_str_len_list, attack_
     for domain in domain_list:
         for control_str_len in control_str_len_list:
             for exp in exp_list:
-                candidate_file = f'./results/{retriever}/{dataset}/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
+                candidate_file = f'./results/adv_suffix/{retriever}/{dataset}/{exp}/domain_{domain}/combined_results_{control_str_len}.csv'
                 try:
                     df = pd.read_csv(candidate_file)
                 except:
                     continue
-                attack_suffix = [attack_info + ' ' + x for x in df['adv_suffix'].tolist()]
+                attack_suffix = [attack_info + ' ' + x for x in df['control_suffix'].tolist()] # adv_suffix
                 suffix_all[control_str_len] = attack_suffix
                 all_list += attack_suffix
     return all_list
@@ -261,7 +264,7 @@ def load_beir_data(args):
     if args.eval_dataset == 'msmarco':
         qrels = load_tsv_to_dict(f"./datasets/{args.eval_dataset}/qrels/dev.tsv", key_field="query-id")
     elif args.eval_dataset == 'nq':
-        qrels = load_tsv_to_dict(f"./datasets/{args.eval_dataset}/qrels/ground_truth.tsv", key_field="query-id")
+        qrels = load_tsv_to_dict(f"./datasets/{args.eval_dataset}/qrels/test.tsv", key_field="query-id")
     elif args.eval_dataset == 'hotpotqa':
         qrels = load_tsv_to_dict(f"./datasets/{args.eval_dataset}/qrels/test.tsv", key_field="query-id")
     else:
