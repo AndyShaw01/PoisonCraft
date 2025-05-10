@@ -101,15 +101,6 @@ def wrap_prompt(question, context, prompt_id=1) -> str:
         context_str = context
     return RAG_PROMPT_TEMPLATE.replace('[question]', question).replace('[context]', context_str)
 
-def wrap_prompt_url(question, context, url) -> str:
-    """
-    Wrap a question, context, and URL into a prompt string.
-    """
-    assert isinstance(context, list), "Context must be a list."
-    context_str = "\n".join(context)
-    input_prompt = RAG_PROMPT_TEMPLATE.replace('[question]', question).replace('[context]', context_str)
-    return input_prompt.replace('asdasd', url)
-
 # Model creation functions
 def create_model(model_path):
     """

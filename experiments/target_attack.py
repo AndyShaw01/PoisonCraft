@@ -184,7 +184,7 @@ def process_queries(queries, results, corpus, qrels, embedding_model, adv_text_l
                 print(f"Retrieval Failed: {question}")
                 all_results.append(0)
                 continue
-            query_prompt = wrap_prompt_url(question, topk_contents, url=args.url)
+            query_prompt = wrap_prompt(question, topk_contents)
             response = llm.query(query_prompt)
             if args.model_config_path == "deepseek-reasoner":
                 result = predictor.predict(response, is_reasoner=True)
