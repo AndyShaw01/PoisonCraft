@@ -1,6 +1,5 @@
 *.out
 *.log
-*.jsonl
 *.tsv
 *.csv
 *__pycache__/
