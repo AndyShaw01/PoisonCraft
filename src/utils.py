@@ -5,7 +5,7 @@ import subprocess
 import re
 import torch
 import pandas as pd
-from src.models.gpt import GPTModel
+from src.models.gpt import GPTModel,DeepSeekModel
 
 # Predefined prompt template
 RAG_PROMPT_TEMPLATE = (
@@ -106,7 +106,6 @@ def wrap_prompt_url(question, context, url) -> str:
     assert isinstance(context, list), "Context must be a list."
     context_str = "\n".join(context)
     input_prompt = RAG_PROMPT_TEMPLATE.replace('[question]', question).replace('[context]', context_str)
-    # 'asdasd' placeholder was replaced with the URL in the original code
     return input_prompt.replace('asdasd', url)
 
 # Model creation functions
@@ -120,8 +119,7 @@ def create_model(model_path):
     if model_path == "gpt4o-mini":
         model = GPTModel(config)
     elif model_path == "deepseek-reasoner":
-        model = DeepSeek(config)
-    
+        model = DeepSeekModel(config)
     return model
 
 # Model utility functions
@@ -259,16 +257,13 @@ def load_beir_data(args):
         tuple: Loaded queries, corpus, and qrels.
     """
     queries = load_jsonl_to_json(args.queries_folder + f"/domain_{args.target_category}.jsonl")
-    corpus = load_jsonl_to_dict(f"./Datasets/{args.eval_dataset}/corpus.jsonl", key_field="_id")
+    corpus = load_jsonl_to_dict(f"./datasets/{args.eval_dataset}/corpus.jsonl", key_field="_id")
     if args.eval_dataset == 'msmarco':
-        qrels = load_tsv_to_dict(f"./Datasets/{args.eval_dataset}/qrels/dev.tsv", key_field="query-id")
+        qrels = load_tsv_to_dict(f"./datasets/{args.eval_dataset}/qrels/dev.tsv", key_field="query-id")
     elif args.eval_dataset == 'nq':
-        qrels = load_tsv_to_dict(f"./Datasets/{args.eval_dataset}/qrels/ground_truth.tsv", key_field="query-id")
+        qrels = load_tsv_to_dict(f"./datasets/{args.eval_dataset}/qrels/ground_truth.tsv", key_field="query-id")
     elif args.eval_dataset == 'hotpotqa':
-        qrels = load_tsv_to_dict(f"./Datasets/{args.eval_dataset}/qrels/test.tsv", key_field="query-id")
+        qrels = load_tsv_to_dict(f"./datasets/{args.eval_dataset}/qrels/test.tsv", key_field="query-id")
     else:
         raise ValueError(f"Invalid eval_dataset: {args.eval_dataset}")
     return queries, corpus, qrels
-
-
-# if __name__ == "__main__":
