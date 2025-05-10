@@ -18,8 +18,7 @@ RAG_PROMPT_TEMPLATE = (
 # Mapping of model codes to model paths
 MODEL_CODE_TO_MODEL_NAME = {
     "contriever": "facebook/contriever",
-    # "simcse": "princeton-nlp/unsup-simcse-bert-base-uncased",
-    "simcse" : "/data1/shaoyangguang/offline_model/simcse"
+    "simcse": "princeton-nlp/unsup-simcse-bert-base-uncased",
 }
 
 MODEL_PATH_TO_MODEL_CONFIG = {
@@ -97,23 +96,21 @@ class MatchPredictor(Predictor):
         return int(bool(self.match_regex.search(content)))
 
 # Prompt wrapping functions
-def wrap_prompt(question, context, prompt_id=1) -> str:
+def wrap_prompt(question, context) -> str:
     """
-    Wrap a question and context into a prompt string.
+    Wrap a question, context, and URL into a prompt string.
     """
-    if prompt_id == 4:
-        assert isinstance(context, list), "Context must be a list for prompt_id=4."
-        context_str = "\n".join(context)
-    else:
-        context_str = context
-    return RAG_PROMPT_TEMPLATE.replace('[question]', question).replace('[context]', context_str)
+    assert isinstance(context, list), "Context must be a list."
+    context_str = "\n".join(context)
+    input_prompt = RAG_PROMPT_TEMPLATE.replace('[question]', question).replace('[context]', context_str)
+    # 'asdasd' placeholder was replaced with the URL in the original code
+    return input_prompt
 
 # Model creation functions
 def create_model(model_path):
     """
     Factory method to create a LLM instance
     """
-    pdb.set_trace()
     # map the model_path to the model path
     config_path = MODEL_PATH_TO_MODEL_CONFIG[model_path]
     config = load_json(config_path)

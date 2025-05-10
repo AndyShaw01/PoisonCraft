@@ -11,7 +11,7 @@ import pandas as pd
 import torch.nn.functional as F
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from src.embedding.sentence_embedding import SentenceEmbeddingModel, OpenAIEmbeddingLLM
+from src.embedding.sentence_embedding import SentenceEmbeddingModel
 from src.utils import *
 
 
@@ -41,7 +41,7 @@ def setup():
     args.queries_folder = f"./datasets/{args.target_dataset}/domain/test_domains_14"
     args.model_path = MODEL_CODE_TO_MODEL_NAME[args.retriever]
     
-    args.result_path = f'./results/{args.exp_mode}/retrieval_results/{args.retriever}_{args.target_retriever}/{args.target_dataset}_top.csv'
+    args.result_path = f'./results/{args.exp_mode}/retrieval_results/{args.retriever}_{args.retriever}/{args.target_dataset}_top.csv'
     # pdb.set_trace()
     if not os.path.exists(args.result_path):
         os.makedirs(os.path.dirname(args.result_path), exist_ok=True)
@@ -137,7 +137,7 @@ def main(args, writter):
         all_list = get_poisoned_info_for_main_result(args.domain_list, args.control_str_len_list, args.attack_info, args.retriever, args.target_dataset)
         
         attack_block_size = args.attack_block_size
-        adv_embeds = batch_process_embeddings(embedding_model, all_list, batch_size=512)
+        adv_embeds = batch_process_embeddings(embedding_model, all_list[:1000], batch_size=512)
 
         for target_threshold in args.target_threshold:
             all_jailbreak_num = 0
@@ -145,7 +145,7 @@ def main(args, writter):
                 queries_path = f"{args.queries_folder}/domain_{category}.jsonl"
                 queries = load_queries(queries_path)
 
-                ground_truth_path = f'./datasets/{args.target_dataset}/ground_truth_topk_{args.target_retriever}/ground_truth_top_{target_threshold}_domain_{category}.csv'
+                ground_truth_path = f'./datasets/{args.target_dataset}/ground_truth_topk_{args.retriever}/ground_truth_top_{target_threshold}_domain_{category}.csv'
                 ground_truth = load_ground_truth(ground_truth_path, target_threshold, f'cuda:{args.device}')
 
                 query_block_size = args.query_block_size
@@ -158,7 +158,7 @@ def main(args, writter):
                     query_end_idx = min(query_start_idx + query_block_size, len(queries))
                     ground_truth_block = ground_truth[query_start_idx:query_end_idx].unsqueeze(1)
 
-                    jailbreak_num += process_query_block(embedding_model, queries[query_start_idx:query_end_idx], adv_embeds, ground_truth_block, attack_block_size, args.target_retriever)
+                    jailbreak_num += process_query_block(embedding_model, queries[query_start_idx:query_end_idx], adv_embeds, ground_truth_block, attack_block_size, args.retriever)
                 
                 asr = round(jailbreak_num / len(queries), 4)
                 all_jailbreak_num += jailbreak_num
